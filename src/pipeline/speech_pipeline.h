@@ -34,4 +34,5 @@ private:
     uint16_t    sessionCtr_   = 0;
     char        session_[SESSION_ID_LEN] = {0};
     int         dbgCounter_   = 0;
+    bool        wasMuted_     = false;
 };

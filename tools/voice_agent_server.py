@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
 ESP32 voice agent server: WebSocket in -> STT -> LangGraph agent (+ MCP
-tools) -> Piper TTS -> playback. Extends the simpler server.py with a
-reasoning agent in the middle.
+tools) -> Piper TTS -> playback.
 
 Pipeline, per connected device (one queue + one worker, in order,
 never blocking the WebSocket receive loop):
@@ -13,7 +12,7 @@ never blocking the WebSocket receive loop):
                               │
                    Agent.respond(text, thread_id)       -> reply text
                               │
-                   PiperTTS.speak(reply text)            -> plays audio
+                   mute -> PiperTTS.speak(reply) -> unmute
 
     pip install moonshine-voice langgraph langchain-mcp-adapters \
                 langchain-ollama piper-tts sounddevice numpy websockets
@@ -21,6 +20,7 @@ never blocking the WebSocket receive loop):
 """
 import asyncio
 import json
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -37,6 +37,25 @@ MIN_SECONDS = 0.25
 MCP_SERVERS = {
     # "vitals": {"transport": "stdio", "command": "python", "args": ["mcp_servers/vitals.py"]},
 }
+
+# Strips emoji / pictographs so the TTS voice never has to "read" one aloud
+# (e.g. Piper narrating a smiley as "smiling face with smiling eyes").
+_EMOJI_RE = re.compile(
+    "[" "\U0001F300-\U0001FAFF" "\U00002600-\U000027BF"
+    "\U0001F1E6-\U0001F1FF" "\U00002190-\U000021FF" "\U00002B00-\U00002BFF"
+    "️" "]+", flags=re.UNICODE,
+)
+
+
+def clean_for_speech(text: str) -> str:
+    return _EMOJI_RE.sub("", text).strip()
+
+
+NO_EMOJI_SYSTEM_PROMPT = (
+    "You are a concise voice assistant. Your replies are read aloud by a "
+    "text-to-speech engine, so: never use emojis, emoticons, or symbols; "
+    "never use markdown; write plain spoken sentences only."
+)
 
 
 # --------------------------------------------------------------------------
@@ -72,13 +91,12 @@ class MoonshineStreamSTT:
         )
 
     def transcribe(self, utt: Utterance) -> str:
+        """Blocking. Run via asyncio.to_thread() from the async pipeline."""
         stream = self._transcriber.create_stream()
 
         transcripts = []
 
         def on_transcript(event):
-            # Inspect the event object if needed
-            print("Moonshine event:", event)
             transcripts.append(str(event))
 
         stream.add_listener(on_transcript)
@@ -92,15 +110,10 @@ class MoonshineStreamSTT:
                 chunk = audio[i:i + chunk_samples]
                 stream.add_audio(chunk.tolist(), utt.sample_rate)
 
-            # Get final transcription
             result = stream.update_transcription()
 
-            print("Moonshine result:", result)
-
-            # Try to extract text from the Transcript object
             if hasattr(result, "text"):
                 return result.text.strip()
-
             return str(result).strip()
 
         finally:
@@ -129,16 +142,18 @@ class LangGraphAgent:
             client = MultiServerMCPClient(self._mcp_servers)
             tools = await client.get_tools()
 
-        # Requires: ollama pull qwen3:0.6b   (and `ollama serve` running)
-        llm = ChatOllama(model="qwen3:0.6b")
-        self._graph = create_react_agent(llm, tools, checkpointer=MemorySaver())
+        # Requires: ollama pull qwen3:1.7b   (and `ollama serve` running)
+        llm = ChatOllama(model="qwen3:1.7b")
+        self._graph = create_react_agent(
+            llm, tools, prompt=NO_EMOJI_SYSTEM_PROMPT, checkpointer=MemorySaver()
+        )
 
     async def respond(self, text: str, thread_id: str) -> str:
         result = await self._graph.ainvoke(
             {"messages": [{"role": "user", "content": text}]},
             config={"configurable": {"thread_id": thread_id}},
         )
-        return result["messages"][-1].content
+        return clean_for_speech(result["messages"][-1].content)
 
 
 # --------------------------------------------------------------------------
@@ -172,7 +187,7 @@ class VoicePipeline:
     def __init__(self, stt: MoonshineStreamSTT, agent: LangGraphAgent, tts: PiperTTS):
         self.stt, self.agent, self.tts = stt, agent, tts
 
-    async def __call__(self, utt: Utterance, thread_id: str) -> dict:
+    async def __call__(self, utt: Utterance, thread_id: str, ws) -> dict:
         t0 = time.perf_counter()
         text = await asyncio.to_thread(self.stt.transcribe, utt)
         t1 = time.perf_counter()
@@ -182,7 +197,21 @@ class VoicePipeline:
         reply = await self.agent.respond(text, thread_id)
         t2 = time.perf_counter()
 
-        await asyncio.to_thread(self.tts.speak, reply)
+        # Mute the device's mic while the reply plays, so it doesn't hear
+        # (and transcribe) its own voice -- otherwise the agent ends up
+        # talking to itself in a feedback loop. speak() blocks until
+        # playback ends, so unmute only fires once the speaker has
+        # actually gone quiet. The timeout unmutes anyway if the "mute"
+        # message is ever lost or the connection drops, so the mic can
+        # never get stuck off.
+        await ws.send(json.dumps({"type": "mute"}))
+        try:
+            await asyncio.wait_for(asyncio.to_thread(self.tts.speak, reply), timeout=30)
+        finally:
+            try:
+                await ws.send(json.dumps({"type": "unmute"}))
+            except websockets.ConnectionClosed:
+                pass
         t3 = time.perf_counter()
 
         return {
@@ -206,7 +235,7 @@ def make_handler(pipeline: VoicePipeline):
                 if utt is None:
                     return
                 try:
-                    r = await pipeline(utt, thread_id)
+                    r = await pipeline(utt, thread_id, ws)
                     if r["text"]:
                         print(f"    You: {r['text']!r}  (stt {r['stt_ms']}ms, "
                               f"agent {r['agent_ms']}ms, tts {r['tts_ms']}ms)")

@@ -67,6 +67,26 @@ void SpeechPipeline::abortUtterance(const char* reason) {
 }
 
 void SpeechPipeline::processFrame(const int16_t* frame) {
+    // While the server is speaking (TTS), don't listen at all: an unmuted
+    // mic would capture the agent's own voice from the speaker and send it
+    // right back as a new "utterance", causing the agent to talk to itself.
+    const bool muted = net::isMuted();
+    if (muted) {
+        if (state_ != SpeechState::IDLE) abortUtterance("muted (agent speaking)");
+        wasMuted_ = true;
+        return;                      // skip VAD, ring, everything
+    }
+    if (wasMuted_) {
+        // Just unmuted: drop any pre-roll/debounce state from before the
+        // mute window so a false start can't fire immediately. Do NOT
+        // reset the VAD itself -- that would also wipe its calibrated
+        // noise floor and force 50 frames of recalibration, during which
+        // real speech would be misread as silence.
+        wasMuted_ = false;
+        ring_.clear();
+        speechRun_ = 0;
+    }
+
     const bool speech = vad_.process(frame, FRAME_SAMPLES);
 
 #if DEBUG_VAD_LEVELS

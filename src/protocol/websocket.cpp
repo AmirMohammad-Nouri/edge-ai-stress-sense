@@ -19,6 +19,7 @@ struct NetMsg {
 
 QueueHandle_t     g_queue = nullptr;
 std::atomic<bool> g_connected{false};
+std::atomic<bool> g_muted{false};
 WebSocketsClient  g_ws;                  // touched ONLY from the network task
 
 // --- state owned by the network task ---
@@ -36,6 +37,16 @@ void flushBatch() {
     if (g_batchFrames == 0) return;
     g_ws.sendBIN(reinterpret_cast<uint8_t*>(g_batch), (size_t)g_batchFrames * FRAME_BYTES);
     g_batchFrames = 0;
+}
+
+// Bounded substring search (payload isn't null-terminated, so strstr is unsafe).
+bool containsBounded(const char* hay, size_t hayLen, const char* needle) {
+    size_t needleLen = strlen(needle);
+    if (needleLen == 0 || needleLen > hayLen) return false;
+    for (size_t i = 0; i + needleLen <= hayLen; ++i) {
+        if (memcmp(hay + i, needle, needleLen) == 0) return true;
+    }
+    return false;
 }
 
 void handle(const NetMsg& m) {
@@ -83,13 +94,33 @@ void onEvent(WStype_t type, uint8_t* payload, size_t length) {
         case WStype_DISCONNECTED:
             if (g_connected) Serial.println("[ws] disconnected");
             g_connected = false;
+            g_muted = false;        // never leave the mic stuck off
             resetSession();
             xQueueReset(g_queue);
             break;
 
-        case WStype_TEXT:
+        case WStype_TEXT: {
             Serial.printf("[ws] server: %.*s\n", (int)length, (const char*)payload);
+            // Tiny hand-rolled parse (no JSON lib needed): the server is
+            // trusted, and this is the only field we act on here.
+            auto has = [&](const char* needle) {
+                return containsBounded(reinterpret_cast<const char*>(payload), length, needle);
+            };
+            // Match on the quoted value alone ("mute"/"unmute") so this
+            // doesn't depend on whether the sender puts a space after the
+            // colon -- json.dumps() in Python does by default, which is
+            // what broke the exact "\"type\":\"mute\"" match before.
+            // Checking the quotes on both sides of "mute" also keeps it
+            // from matching inside "unmute".
+            if (has("\"unmute\"")) {
+                g_muted = false;
+                Serial.println("[ws] unmuted");
+            } else if (has("\"mute\"")) {
+                g_muted = true;
+                Serial.println("[ws] muted (agent speaking)");
+            }
             break;
+        }
 
         case WStype_ERROR:
             Serial.println("[ws] error");
@@ -139,6 +170,7 @@ bool start() {
 }
 
 bool isConnected() { return g_connected.load(); }
+bool isMuted() { return g_muted.load(); }
 
 bool sendStart(const char* sessionId) {
     NetMsg m;
