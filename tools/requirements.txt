@@ -1,0 +1,15 @@
+# Stress system (laptop). Voice extras are only needed for spoken commands/replies.
+numpy
+scipy
+scikit-learn
+joblib
+websockets>=13
+starlette
+uvicorn
+# voice (optional)
+moonshine-voice
+piper-tts
+sounddevice
+langgraph
+langchain-mcp-adapters
+langchain-ollama

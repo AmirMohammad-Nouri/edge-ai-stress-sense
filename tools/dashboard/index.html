@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StressSense · Wireless Stress Measurement</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="viz-root">
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M2 17h6l3-8 5 16 4-11 2 3h8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div>
+      <h1>StressSense</h1>
+      <p>ESP32 + ESP8266 wireless stress measurement · WESAD-trained model</p>
+    </div>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="top-right">
+    <span id="conn" class="conn">connecting…</span>
+    <button id="theme" class="ghost" title="Toggle light/dark">◐</button>
+  </div>
+</header>
+
+<main class="grid">
+
+  <!-- ===== System diagram ===== -->
+  <section class="card span-8 diagram-card">
+    <div class="card-head">
+      <h2>System architecture</h2>
+      <div class="legend-inline">
+        <span><i class="lg lg-off"></i>offline</span>
+        <span><i class="lg lg-on"></i>online</span>
+        <span><i class="lg lg-active"></i>active / data flowing</span>
+      </div>
+    </div>
+    <svg id="diagram" viewBox="0 0 1100 450" role="img" aria-label="Live system diagram">
+      <defs>
+        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="ledGlow">
+          <stop offset="0" stop-color="#ffd85a" stop-opacity="1"/>
+          <stop offset="1" stop-color="#ffb000" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <g id="wires"></g>
+      <g id="nodes"></g>
+      <g id="pulses"></g>
+    </svg>
+  </section>
+
+  <!-- ===== Measurement / result ===== -->
+  <section class="card span-4 measure-card">
+    <div class="card-head">
+      <h2>Stress estimate</h2>
+      <span id="normBadge" class="badge">—</span>
+    </div>
+    <div class="gauge-wrap">
+      <svg id="gauge" viewBox="0 0 240 150" aria-label="Stress probability gauge">
+        <path class="g-track" d="M20 130 A100 100 0 0 1 220 130"/>
+        <path id="gFill" class="g-fill" style="stroke-opacity:0" d="M20 130 A100 100 0 0 1 220 130"/>
+        <circle id="gRing" class="g-ring" cx="120" cy="130" r="0"/>
+      </svg>
+      <div class="gauge-center">
+        <div id="gValue" class="hero">—</div>
+        <div id="gLevel" class="level">no measurement yet</div>
+      </div>
+    </div>
+    <div id="progress" class="progress hidden">
+      <div class="progress-row"><span id="progLabel">Collecting</span><span id="progTime">0 / 60 s</span></div>
+      <div class="bar"><div id="progBar"></div></div>
+      <div class="progress-row small"><span id="progVitals">PPG/GSR —</span><span id="progMotion">motion —</span></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="k">Heart rate</span><span class="v" id="sHR">—</span><span class="u">bpm</span></div>
+      <div class="stat"><span class="k">HRV (RMSSD)</span><span class="v" id="sRMSSD">—</span><span class="u">ms</span></div>
+      <div class="stat"><span class="k">Skin conductance</span><span class="v" id="sEDA">—</span><span class="u">µS</span></div>
+      <div class="stat"><span class="k">SCR peaks / min</span><span class="v" id="sSCR">—</span><span class="u"></span></div>
+    </div>
+    <div class="probs" id="probs"></div>
+    <div class="actions">
+      <button id="bMeasure" class="primary">● Measure stress (60 s)</button>
+      <button id="bCalib">Calibrate baseline (3 min)</button>
+      <button id="bPreview">Signal check (30 s)</button>
+      <button id="bStop" class="danger">■ Stop</button>
+    </div>
+    <div id="warnings" class="warnings"></div>
+    <p class="disclaimer">Estimate from a model trained on 15 people (WESAD lab study) — not a medical measurement.</p>
+  </section>
+
+  <!-- ===== Live signals ===== -->
+  <section class="card span-6">
+    <div class="card-head"><h2>PPG · blood volume pulse</h2><span class="meta" id="ppgMeta">ESP8266 · ADS1115 A0 · 64 Hz</span></div>
+    <div class="chart" id="cPPG"></div>
+  </section>
+  <section class="card span-6">
+    <div class="card-head"><h2>GSR · skin conductance</h2><span class="meta" id="gsrMeta">ESP8266 · ADS1115 A1 · µS</span></div>
+    <div class="chart" id="cGSR"></div>
+  </section>
+  <section class="card span-6">
+    <div class="card-head"><h2>Accelerometer</h2><span class="meta">ESP32 · MPU6050 · 32 Hz · g</span></div>
+    <div class="chart" id="cACC"></div>
+  </section>
+  <section class="card span-6">
+    <div class="card-head"><h2>Microphone level</h2><span class="meta" id="micMeta">ESP32 · INMP441 · 16 kHz</span></div>
+    <div class="chart" id="cMIC"></div>
+  </section>
+
+  <!-- ===== Link quality ===== -->
+  <section class="card span-4">
+    <div class="card-head"><h2>Wireless links</h2></div>
+    <table class="links" id="links">
+      <thead><tr><th>Link</th><th>RSSI</th><th>Rate</th><th>Loss</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="devinfo" id="devinfo"></div>
+  </section>
+
+  <!-- ===== Voice ===== -->
+  <section class="card span-4 voice-card">
+    <div class="card-head"><h2>Voice assistant</h2><span class="meta">say “measure my stress level”</span></div>
+    <div class="feed" id="voiceFeed"></div>
+    <form id="sayForm" class="say">
+      <input id="sayInput" placeholder="Type a command (same as speaking it)…" autocomplete="off">
+      <button type="submit">Send</button>
+    </form>
+  </section>
+
+  <!-- ===== History ===== -->
+  <section class="card span-4">
+    <div class="card-head"><h2>Measurement history</h2><span class="meta">P(stress) per session</span></div>
+    <div class="chart short" id="cHIST"></div>
+    <div class="calib" id="calibInfo"></div>
+    <button id="bGsrCal" class="ghost small-btn" title="Take the sensor off first">Set GSR zero (sensor not worn)</button>
+  </section>
+
+  <!-- ===== Features + events ===== -->
+  <section class="card span-8">
+    <div class="card-head"><h2>Extracted features (last window)</h2><span class="meta">WESAD wrist features · Schmidt et al. 2018, Table 1</span></div>
+    <div class="feat-table" id="featTable"><p class="muted">Run a measurement to see all features.</p></div>
+  </section>
+  <section class="card span-4">
+    <div class="card-head"><h2>Event log</h2></div>
+    <div class="feed log" id="eventLog"></div>
+  </section>
+</main>
+</div>
+<div id="tooltip" class="tooltip hidden"></div>
+<script src="/static/charts.js"></script>
+<script src="/static/diagram.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -20,4 +20,12 @@ bool sendStart(const char* sessionId);
 bool sendAudio(const int16_t* frame);        // exactly FRAME_SAMPLES samples
 bool sendEnd(const char* sessionId);
 
+// Any task: queue a JSON text frame (<= 639 chars) for the server.
+bool sendText(const char* json);
+
+// Called from the network task for server text frames of type
+// measure_start / measure_stop / ping. Must not block.
+typedef void (*CommandHandler)(const char* json, size_t len);
+void setCommandHandler(CommandHandler h);
+
 }  // namespace net

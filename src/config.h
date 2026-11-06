@@ -76,3 +76,29 @@ constexpr size_t SESSION_ID_LEN   = 16;
 
 // Print rms / noise floor once per second (great for tuning). 0 to disable.
 #define DEBUG_VAD_LEVELS 1
+
+// =====================================================================
+//  Stress measurement: MPU6050 + link to the ESP8266 vitals node
+//  (full pin table and protocol: docs/PINOUT.md, docs/PROTOCOL.md)
+// =====================================================================
+// MPU6050 on the default ESP32 I2C pins. AD0 -> GND => address 0x68.
+constexpr int MPU_SDA_PIN = 21;
+constexpr int MPU_SCL_PIN = 22;
+constexpr int MPU_SAMPLE_HZ      = 32;    // = Empatica E4 ACC rate used in WESAD
+constexpr int MPU_SAMPLES_PER_PKT = 8;    // 8 x 31.25 ms = 250 ms per UDP packet
+
+// UDP ports -- must match esp8266_vitals/src/config.h and tools/stress/config.py
+constexpr uint16_t PORT_ESP8266_CONTROL = 4210;  // ESP8266 listens for START/STOP
+constexpr uint16_t PORT_STATUS          = 4212;  // ESP8266 heartbeats/ACKs (broadcast); ESP32 binds it
+constexpr uint16_t PORT_LAPTOP_VITALS   = 4211;  // laptop: ESP8266 PPG/GSR packets
+constexpr uint16_t PORT_LAPTOP_MOTION   = 4213;  // laptop: ESP32 MPU6050 packets
+
+// Optional: fixed ESP8266 IP if your router blocks broadcast ("" = auto-discover).
+#define ESP8266_STATIC_IP ""
+
+constexpr uint32_t PEER_TIMEOUT_MS  = 3500;   // no heartbeat for this long => ESP8266 offline
+constexpr int      START_RETRIES    = 6;      // START re-sent every 250 ms until ACK
+constexpr uint32_t STATUS_PERIOD_MS = 1000;   // status JSON to the laptop
+
+// On-board LED (GPIO2 on most DevKitC boards): ON while a measurement runs.
+constexpr int PIN_STATUS_LED = 2;

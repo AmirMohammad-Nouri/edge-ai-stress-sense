@@ -6,6 +6,8 @@
 #include "vad/vad.h"
 #include "pipeline/speech_pipeline.h"
 #include "protocol/websocket.h"
+#include "link/coordinator.h"
+#include "status.h"
 
 // Big objects live in .bss, not on a task stack.
 static Microphone     g_mic;
@@ -18,6 +20,7 @@ static void audioTask(void*) {
         vTaskDelete(nullptr);
         return;
     }
+    status::micOk = true;
 
     static int16_t frame[FRAME_SAMPLES];
 
@@ -59,7 +62,7 @@ static bool connectWifi() {
 void setup() {
     Serial.begin(115200);
     delay(500);
-    Serial.println("\n=== esp32_voice: mic -> VAD -> WebSocket ===");
+    Serial.println("\n=== esp32_voice: mic -> VAD -> WebSocket  +  MPU6050 / ESP8266 link ===");
 
     if (!connectWifi()) {
         delay(3000);
@@ -70,6 +73,11 @@ void setup() {
         Serial.println("[net] start failed");
         delay(3000);
         ESP.restart();
+    }
+
+    // MPU6050 + ESP8266 link + status reports (core 0, low priority).
+    if (!coord::start()) {
+        Serial.println("[coord] start failed (stress measurement disabled)");
     }
 
     // Audio on core 1, network on core 0 (next to the WiFi stack).
