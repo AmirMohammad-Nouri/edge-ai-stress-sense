@@ -9,13 +9,18 @@
 namespace net {
 namespace {
 
-enum class MsgType : uint8_t { START, AUDIO, END };
+enum class MsgType : uint8_t { START, AUDIO, END, TEXT };
 
 struct NetMsg {
     MsgType type;
     char    session[SESSION_ID_LEN];
-    int16_t audio[FRAME_SAMPLES];        // only used by AUDIO
+    union {
+        int16_t audio[FRAME_SAMPLES];    // AUDIO
+        char    text[FRAME_BYTES];       // TEXT (null-terminated JSON)
+    };
 };
+
+CommandHandler g_cmdHandler = nullptr;
 
 QueueHandle_t     g_queue = nullptr;
 std::atomic<bool> g_connected{false};
@@ -69,6 +74,10 @@ void handle(const NetMsg& m) {
             if (++g_batchFrames >= CHUNK_FRAMES) flushBatch();
             break;
 
+        case MsgType::TEXT:
+            g_ws.sendTXT(m.text);
+            break;
+
         case MsgType::END:
             if (!g_inSession) break;
             flushBatch();                            // send whatever is left
@@ -112,7 +121,10 @@ void onEvent(WStype_t type, uint8_t* payload, size_t length) {
             // what broke the exact "\"type\":\"mute\"" match before.
             // Checking the quotes on both sides of "mute" also keeps it
             // from matching inside "unmute".
-            if (has("\"unmute\"")) {
+            // Measurement commands go to the coordinator (it runs in another task).
+            if (has("\"measure_start\"") || has("\"measure_stop\"") || has("\"ping\"")) {
+                if (g_cmdHandler) g_cmdHandler(reinterpret_cast<const char*>(payload), length);
+            } else if (has("\"unmute\"")) {
                 g_muted = false;
                 Serial.println("[ws] unmuted");
             } else if (has("\"mute\"")) {
@@ -170,6 +182,15 @@ bool start() {
 }
 
 bool isConnected() { return g_connected.load(); }
+void setCommandHandler(CommandHandler h) { g_cmdHandler = h; }
+
+bool sendText(const char* json) {
+    if (!g_connected) return false;
+    NetMsg m;
+    m.type = MsgType::TEXT;
+    strlcpy(m.text, json, sizeof(m.text));
+    return xQueueSend(g_queue, &m, pdMS_TO_TICKS(20)) == pdTRUE;
+}
 bool isMuted() { return g_muted.load(); }
 
 bool sendStart(const char* sessionId) {

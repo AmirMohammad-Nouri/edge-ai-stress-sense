@@ -1,4 +1,67 @@
-# esp32_voice — I2S mic → pre-roll → VAD → speech FSM → WebSocket
+# StressSense: wireless stress measurement with ESP32 + ESP8266
+
+Say **"measure my stress level"**. The ESP32 hears you, tells the ESP8266 over
+WiFi to start, the ESP8266's LED turns on, and for 60 s both boards stream
+their sensors to the laptop. A model trained on the **WESAD** dataset then
+estimates your stress level. The result is spoken back and shown on a live dashboard.
+
+```
+ ESP32  (INMP441 mic, MPU6050)  ── WebSocket audio/status ─┐
+   ▲ │  UDP START / ACK / heartbeat                        ├──► laptop: STT → intent → features → ML → dashboard :8080
+   │ ▼                                                     │                          └──► spoken reply (Piper TTS)
+ ESP8266 (PPG + GSR via ADS1115, LED)  ── UDP PPG+GSR ─────┘
+```
+
+| Part | Where | Docs |
+|---|---|---|
+| ESP32 firmware (mic, MPU6050, coordinator) | `src/`, `platformio.ini` | appendix below, `docs/PINOUT.md` |
+| ESP8266 firmware (PPG, GSR, ADS1115, LED) | `esp8266_vitals/` | `docs/PINOUT.md` |
+| Wireless protocol | | `docs/PROTOCOL.md` |
+| Laptop server (voice + sensors + ML + dashboard) | `tools/stress_server.py`, `tools/stress/` | below |
+| Dashboard | `tools/dashboard/` | open `http://<laptop-ip>:8080` |
+| ML (WESAD extraction, features, training) | `tools/ml/` | **`tools/ml/README.md`** (training steps + WESAD notes) |
+| Hardware simulator | `tools/sim_devices.py` | below |
+
+## Quick start
+
+1. **Wire it up**: see `docs/PINOUT.md` (every pin, plus why it was chosen).
+2. **ESP32**: in `src/config.h` set `WIFI_SSID`, `WIFI_PASSWORD`, and `WS_HOST` = the laptop's LAN IP.
+   `pio run -t upload && pio device monitor` (libraries: WebSockets, MPU6050_light).
+3. **ESP8266**: in `esp8266_vitals/src/config.h` set the same `WIFI_SSID` / `WIFI_PASSWORD`.
+   No IP needed. `cd esp8266_vitals && pio run -t upload && pio device monitor`
+   (no extra libraries). At boot, the LED flashes once and the serial log says `ADS1115 ... OK`.
+4. **Laptop**: open the firewall ports (`docs/PROTOCOL.md`), then
+   ```bash
+   venv/bin/python tools/stress_server.py            # add --no-llm if Ollama isn't running
+   ```
+   and open `http://localhost:8080`. Within a few seconds both boards show as online in the diagram.
+5. **Train the model** (`tools/ml/README.md`, section 2). Until then, a measurement shows the
+   signals and HR/HRV/EDA, but no stress prediction.
+6. Once: take the GSR electrodes off and press **"Set GSR zero"**. Then sit relaxed and
+   say **"calibrate my baseline"** (3 min). After that: **"measure my stress level"**.
+
+Voice commands: "measure my stress level", "calibrate my baseline", "check my signals" (30 s preview), "stop".
+Anything else goes to the LLM chat agent, as before. The dashboard has buttons for the same
+commands, plus a text box that behaves exactly like speaking.
+
+## Testing without hardware
+
+`tools/sim_devices.py` impersonates both boards using the real protocol and can replay WESAD recordings:
+
+```bash
+venv/bin/python tools/stress_server.py --no-voice &
+venv/bin/python tools/sim_devices.py --source wesad --subject 2 --condition stress --loss 0.02 \
+                                     --say "measure my stress level"
+# --no-esp32 tests the laptop->ESP8266 fallback; --source synthetic --hr 80 for a synthetic pulse
+```
+
+## Server options
+`--no-voice` (no STT/TTS/LLM) · `--no-llm` · `--no-tts` (replies on the dashboard only) · `--http-port`.
+Every measurement is saved to `tools/data/sessions/<time>_<id>.json/.npz` (raw signals + features + prediction).
+
+---
+
+# Appendix: ESP32 voice pipeline (I2S mic → pre-roll → VAD → speech FSM → WebSocket)
 
 ESP32-S3 firmware that only captures audio, detects speech, and streams it.
 It knows nothing about STT / translation / TTS.
@@ -18,7 +81,7 @@ Default build targets a **classic ESP32** (DevKitC / WROOM). For an ESP32-S3 boa
 |-------------|------------------------|
 | SCK         | 26 (`PIN_I2S_BCLK`)    |
 | WS          | 25 (`PIN_I2S_WS`)      |
-| SD          | 33 (`PIN_I2S_SD`)      |
+| SD          | 27 (`PIN_I2S_SD`)      |
 | L/R         | **GND** (left channel; if 3V3 set `MIC_USE_LEFT_CHANNEL 0`) |
 | VDD         | 3V3                    |
 | GND         | GND                    |
@@ -80,7 +143,9 @@ src/audio/microphone.*        I2S 32→16 bit, DC blocker
 src/audio/audio_buffer.h      frame ring (pre-roll)
 src/vad/vad.*                 IVad + EnergyVad (adaptive floor, hysteresis)
 src/pipeline/speech_pipeline.*  IDLE / SPEAKING / MAYBE_END
-src/protocol/websocket.*      queue + network task
+src/protocol/websocket.*      queue + network task (+ JSON text messages / commands)
+src/link/coordinator.*        MPU6050 sampling, ESP8266 discovery + START relay, 1 Hz status
+src/sensors/mpu_stream.*      MPU6050 driver wrapper
 tools/test_server.py          saves utterances as WAV (firmware testing only)
 tools/server.py               real server: in-memory audio -> Moonshine -> translation
 ```

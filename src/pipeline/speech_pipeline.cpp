@@ -1,5 +1,6 @@
 #include "speech_pipeline.h"
 #include "../protocol/websocket.h"
+#include "../status.h"
 
 #include <Arduino.h>
 #include <esp_system.h>
@@ -41,6 +42,7 @@ void SpeechPipeline::beginUtterance() {
     for (size_t i = 0; i < pre; ++i) emit(ring_.at(i));
     ring_.clear();
 
+    status::utterances++;
     Serial.printf("[pipe] speech_start id=%s (pre-roll %u frames)\n", session_, (unsigned)pre);
 }
 
@@ -88,6 +90,7 @@ void SpeechPipeline::processFrame(const int16_t* frame) {
     }
 
     const bool speech = vad_.process(frame, FRAME_SAMPLES);
+    status::reportLevel(vad_.level());
 
 #if DEBUG_VAD_LEVELS
     if (++dbgCounter_ >= (1000 / FRAME_MS)) {
@@ -130,6 +133,8 @@ void SpeechPipeline::processFrame(const int16_t* frame) {
             }
             break;
     }
+
+    status::speechState = (uint8_t)state_;
 
     if (state_ != SpeechState::IDLE) {
         if (overflow_) {

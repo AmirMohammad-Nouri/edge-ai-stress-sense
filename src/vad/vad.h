@@ -11,6 +11,8 @@ public:
     virtual void reset() = 0;
     // Optional: human-readable levels for the serial monitor.
     virtual void describe(char* buf, size_t n) const { if (n) buf[0] = 0; }
+    // RMS of the last frame, normalised 0..1 (for the dashboard level meter).
+    virtual float level() const { return 0.0f; }
 };
 
 // Energy VAD with:
@@ -23,6 +25,7 @@ public:
     bool process(const int16_t* samples, size_t count) override;
     void reset() override;
     void describe(char* buf, size_t n) const override;
+    float level() const override { return rms_; }
 
 private:
     float startThresh() const;

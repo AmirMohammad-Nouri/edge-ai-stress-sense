@@ -7,3 +7,6 @@ recordings
 .vscode
 venv
 
+tools/ml/cache
+tools/data
+__pycache__
