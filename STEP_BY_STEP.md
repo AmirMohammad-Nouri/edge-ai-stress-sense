@@ -204,7 +204,7 @@ Details and background are in [tools/ml/README.md](tools/ml/README.md).
 cd ~/projects/wireless_project/esp32_voice
 venv/bin/python -I tools/ml/wesad_extract.py     # WESAD -> wrist signals   (already done once)
 venv/bin/python -I tools/ml/build_dataset.py     # 60 s windows -> features (already done once)
-venv/bin/python -I tools/ml/train.py             # LOSO benchmark + final models (a few minutes)
+venv/bin/python -I tools/ml/train.py --deploy-features physio   # LOSO benchmark + final models (~4 min)
 ```
 - Creates `tools/ml/models/stress_model.joblib` and `tools/ml/models/benchmark.md` (the results table for your report).
 - **Restart the server** (Ctrl+C, then the command from Part 5). The top bar now shows **Model ● ok**, and the

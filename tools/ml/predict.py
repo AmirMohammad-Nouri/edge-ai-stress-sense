@@ -21,6 +21,7 @@ class StressModel:
             "path": str(self.path),
             "created": self.bundle.get("created"),
             "features": len(self.features),
+            "feature_set": self.bundle.get("feature_set", "all"),
             "models": {k: {"clf": v["clf"], "loso_accuracy": round(v["loso_accuracy"], 3),
                            "loso_f1": round(v["loso_f1"], 3)}
                        for k, v in self.bundle["models"].items()},
