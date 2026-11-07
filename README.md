@@ -7,6 +7,8 @@ The ESP8266's LED lights up, and for 60 seconds both boards stream pulse, skin-c
 data to a laptop. There, a classifier trained on the WESAD stress dataset estimates your current
 stress level. The result is spoken back and shown on a live dashboard.
 
+![Dashboard: live system diagram, stress estimate and sensor signals](docs/images/dashboard.png)
+
 | | |
 |---|---|
 | **Stress vs. no stress** | **94.7 %** accuracy, 93.8 % macro-F1, leave-one-subject-out on 15 people |
@@ -15,6 +17,7 @@ stress level. The result is spoken back and shown on a live dashboard.
 | **Wireless** | WiFi only: WebSocket + UDP, ACK/retry, packet-loss tracking |
 | **Build** | Arduino IDE (PlatformIO also supported) |
 
+> **Project website:** https://amirmohammad-nouri.github.io/edge-ai-stress-sense/ explains every part with diagrams and charts.  
 > **Building it yourself?** Follow **[STEP_BY_STEP.md](STEP_BY_STEP.md)**, the complete build guide.
 
 ---
@@ -240,7 +243,10 @@ so only its wrist signals are used. Sampling rates were chosen to match:
 | Stress vs. no stress | — | pulse only | 90.2 % | 88.4 % | 85.8 % |
 | Stress vs. no stress | — | skin only (baseline) | 88.9 % | 86.1 % | 79.7 % |
 
-Full tables are in `tools/ml/models/benchmark.md`, after training.
+Full tables: [`tools/ml/models/benchmark.md`](tools/ml/models/benchmark.md).
+
+**A trained model is included** (`tools/ml/models/stress_model.joblib`), so the app predicts stress right after cloning,
+without downloading WESAD. It is derived from the WESAD dataset and, like the dataset, is for non-commercial research use.
 
 **Design decisions backed by the results:**
 - **Motion is excluded from the deployed model.** The accelerometer alone reached 87.5 % (the paper: ~70 %), because

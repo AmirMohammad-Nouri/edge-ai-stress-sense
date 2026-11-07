@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edge AI Stress Sense</title>
+<meta name="description" content="Voice-triggered wireless stress measurement with ESP32 and ESP8266 sensors and a machine-learning model trained on the WESAD dataset.">
+<meta property="og:title" content="Edge AI Stress Sense">
+<meta property="og:description" content="Say “measure my stress level”: two ESP boards stream pulse, skin-conductance and motion data over WiFi to a WESAD-trained stress classifier with a live dashboard.">
+<meta property="og:image" content="images/dashboard.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M2 17h6l3-8 5 16 4-11 2 3h8' fill='none' stroke='%232a78d6' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+
+<nav class="nav" aria-label="Sections">
+  <div class="nav-inner">
+    <a class="brand" href="#top">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M2 17h6l3-8 5 16 4-11 2 3h8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Stress Sense
+    </a>
+    <div class="nav-links" id="navLinks">
+      <a href="#overview">Overview</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#hardware">Hardware</a>
+      <a href="#firmware">Firmware</a>
+      <a href="#wireless">Wireless</a>
+      <a href="#voice">Voice</a>
+      <a href="#ml">Machine learning</a>
+      <a href="#results">Results</a>
+      <a href="#dashboard">Dashboard</a>
+      <a href="#build">Build it</a>
+      <a href="#limitations">Limitations</a>
+    </div>
+    <button class="icon-btn" id="themeBtn" title="Toggle light / dark theme" aria-label="Toggle theme">◐</button>
+    <a class="gh" href="https://github.com/AmirMohammad-Nouri/edge-ai-stress-sense">
+      <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
+
+<!-- ================================================================ HERO -->
+<header class="hero" id="top">
+  <svg class="hero-pulse" viewBox="0 0 600 200" aria-hidden="true"><path d="M0 110 H150 L180 40 L215 175 L245 70 L265 120 L300 110 H600" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="wrap">
+    <div class="eyebrow">Wireless measurement project</div>
+    <h1>Edge AI <span>Stress Sense</span></h1>
+    <p class="lead">Say <strong>“measure my stress level”</strong>. An ESP32 hears you and tells an ESP8266 over WiFi to start.
+      For 60 seconds both boards stream your pulse, skin conductance and motion to a laptop, where a model trained
+      on the <strong>WESAD</strong> stress dataset estimates how stressed you are. The answer is spoken back and shown on a live dashboard.</p>
+    <div class="cta">
+      <a class="btn primary" href="#build">Build it</a>
+      <a class="btn" href="#results">See the results</a>
+      <a class="btn" href="https://github.com/AmirMohammad-Nouri/edge-ai-stress-sense">Source code</a>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="v">94.7%</div><div class="k">stress vs. no-stress accuracy<br>(leave-one-subject-out, 15 people)</div></div>
+      <div class="stat"><div class="v">2 boards</div><div class="k">ESP32 + ESP8266,<br>WiFi only, no wires between them</div></div>
+      <div class="stat"><div class="v">4 sensors</div><div class="k">pulse (PPG), skin conductance (GSR),<br>accelerometer, microphone</div></div>
+      <div class="stat"><div class="v">60 s</div><div class="k">per measurement, the same window<br>as the WESAD benchmark</div></div>
+    </div>
+    <img class="shot" src="images/dashboard.png" alt="The live dashboard: system diagram with active wires, a stress gauge at 100 % high stress, heart rate 104 bpm, and live PPG, skin-conductance, accelerometer and microphone charts" width="1588" height="1340">
+  </div>
+</header>
+
+<!-- ================================================================ OVERVIEW -->
+<section id="overview">
+  <div class="wrap">
+    <div class="eyebrow">Overview</div>
+    <h2>From a spoken sentence to a stress estimate</h2>
+    <p class="lead">Stress shows up in the body before we notice it: the heart beats faster and less variably, and the skin sweats more.
+      This project measures those signals with low-cost sensors, sends them over WiFi, and classifies them with a model
+      trained on a published lab study, triggered entirely by voice.</p>
+    <div class="steps">
+      <div class="card step"><h3>Speak</h3><p>The ESP32's microphone detects speech on the device and streams it to the laptop, where speech-to-text and a command matcher recognise the request.</p></div>
+      <div class="card step"><h3>Coordinate</h3><p>The laptop tells the ESP32 to start. The ESP32 relays <code>START</code> to the ESP8266 over UDP and retries until it gets an <code>ACK</code>.</p></div>
+      <div class="card step"><h3>Collect</h3><p>For 60 s the ESP8266's LED is on while it samples pulse and skin conductance at 64 Hz. The ESP32 samples motion at 32 Hz.</p></div>
+      <div class="card step"><h3>Analyse</h3><p>Lost packets are filled in, units are converted, and 44 physiological features are extracted with the same code used for training.</p></div>
+      <div class="card step"><h3>Answer</h3><p>The classifier returns a stress probability and level. The laptop speaks it and the dashboard shows every detail.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ ARCHITECTURE -->
+<section id="architecture">
+  <div class="wrap">
+    <div class="eyebrow">System architecture</div>
+    <h2>Three devices, one WiFi network</h2>
+    <p class="lead">The two microcontrollers are never wired together. Everything they exchange, with each other and with the laptop, travels over WiFi.
+      Dashed blue lines are wireless links.</p>
+    <div class="card"><svg class="diagram" id="archDiagram" viewBox="0 0 1000 450" role="img" aria-label="System architecture diagram"></svg></div>
+    <h3>Components</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Component</th><th>Hardware / technology</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>ESP32 node</td><td>ESP32-WROOM, INMP441 microphone (I2S), MPU6050 (I2C)</td><td>Voice capture with on-device speech detection, motion sensing, measurement coordinator</td></tr>
+        <tr><td>ESP8266 node</td><td>WeMos D1 mini, ADS1115 16-bit ADC, analog PPG, Grove GSR, LED</td><td>Physiological sensing at 64 Hz, "collecting" indicator</td></tr>
+        <tr><td>Laptop server</td><td>Python asyncio, websockets, Starlette / Uvicorn</td><td>Device hub, measurement orchestration, feature extraction, inference</td></tr>
+        <tr><td>Voice</td><td>Moonshine (speech-to-text), Piper (text-to-speech), optional local LLM via Ollama</td><td>Spoken commands and replies</td></tr>
+        <tr><td>Machine learning</td><td>scikit-learn: AdaBoost, LDA, Random Forest, Decision Tree, kNN</td><td>Stress classification trained on WESAD</td></tr>
+        <tr><td>Dashboard</td><td>HTML / CSS / JavaScript, SVG diagram, canvas charts, WebSocket</td><td>Live visualisation and control in the browser</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- ================================================================ HARDWARE -->
+<section id="hardware">
+  <div class="wrap">
+    <div class="eyebrow">Hardware</div>
+    <h2>Sensors, boards and wiring</h2>
+    <p class="lead">Every sensor runs at 3.3 V. The ESP8266 has only one analog input, but the pulse sensor and the skin-conductance
+      sensor are both analog, so an <strong>ADS1115</strong> 16-bit ADC digitises both and hands the values over I2C.</p>
+
+    <div class="grid-2">
+      <div>
+        <h3>Bill of materials</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Part</th><th class="num">Qty</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>ESP32 DevKitC (WROOM)</td><td class="num">1</td><td>microphone, motion, coordinator</td></tr>
+            <tr><td>ESP8266 WeMos D1 mini</td><td class="num">1</td><td>vitals node</td></tr>
+            <tr><td>INMP441 I2S microphone</td><td class="num">1</td><td>voice commands</td></tr>
+            <tr><td>MPU6050 (GY-521)</td><td class="num">1</td><td>3-axis accelerometer + gyroscope</td></tr>
+            <tr><td>ADS1115 16-bit ADC</td><td class="num">1</td><td>reads both analog sensors</td></tr>
+            <tr><td>Analog PPG pulse sensor</td><td class="num">1</td><td>blood volume pulse → heart rate, HRV</td></tr>
+            <tr><td>Seeed Grove GSR + electrodes</td><td class="num">1</td><td>skin conductance (sweat response)</td></tr>
+            <tr><td>LED + 220 Ω resistor</td><td class="num">1</td><td>lit while collecting</td></tr>
+            <tr><td>Breadboards, jumpers, 2 USB cables, velcro</td><td class="num">—</td><td>assembly and wearing</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div>
+        <h3>Wiring</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Device</th><th>Connection</th></tr></thead>
+          <tbody>
+            <tr><td colspan="2" class="muted" style="font-weight:600">ESP32</td></tr>
+            <tr><td>INMP441</td><td>SCK→GPIO26 · WS→GPIO25 · SD→GPIO27 · L/R→GND · VDD→3V3</td></tr>
+            <tr><td>MPU6050</td><td>SDA→GPIO21 · SCL→GPIO32 · AD0→GND · VCC→3V3</td></tr>
+            <tr><td>Status LED</td><td>GPIO2 (on-board), on while measuring</td></tr>
+            <tr><td colspan="2" class="muted" style="font-weight:600">ESP8266 (D1 mini)</td></tr>
+            <tr><td>ADS1115</td><td>SDA→D2 · SCL→D1 · ADDR→GND · VDD→3V3</td></tr>
+            <tr><td>PPG sensor</td><td>signal→<strong>ADS1115 A0</strong> · +→3V3 · −→GND</td></tr>
+            <tr><td>Grove GSR</td><td>SIG→<strong>ADS1115 A1</strong> · VCC→3V3 · GND→GND</td></tr>
+            <tr><td>LED</td><td>D5 → 220 Ω → LED → GND</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <h3>Why these pins</h3>
+    <div class="grid-3">
+      <div class="card"><h4>Flash pins</h4><p>ESP32 GPIO 6–11 (labelled SD0–SD3, CMD, CLK) are wired to the flash chip inside the module. Anything connected there stops the board from being programmed.</p></div>
+      <div class="card"><h4>Boot pins</h4><p>ESP32 GPIO 0/2/5/12/15 and ESP8266 D3/D4/D8 set the boot mode. GPIO12 even selects the flash voltage, so sensors stay off these pins.</p></div>
+      <div class="card"><h4>Input-only pins</h4><p>ESP32 GPIO 34–39 can't drive a signal or pull up, so they can't be an I2C clock. SCL sits on GPIO32 instead, next to them on the header.</p></div>
+    </div>
+
+    <h3>Sensor placement</h3>
+    <p>WESAD's wrist device was worn on the <strong>non-dominant</strong> wrist, so we copy that: the PPG sits on a fingertip, the GSR electrodes go on two
+      other fingers of the same hand, and the MPU6050 is strapped to the back of that wrist. During a measurement you sit, keep the hand still and stay silent.</p>
+    <div class="callout"><span class="t">Turning raw GSR readings into microsiemens</span>
+      <p>The ADS1115 count is converted to the Grove's 10-bit-equivalent reading <em>X</em>. The Grove formula
+      <code>R = (1024 + 2X)·10000 / (X<sub>cal</sub> − X)</code> gives the skin resistance, and 10<sup>6</sup>/R gives the conductance in µS.
+      <em>X<sub>cal</sub></em> is the not-worn reading, stored once from the dashboard.</p></div>
+  </div>
+</section>
+
+<!-- ================================================================ FIRMWARE -->
+<section id="firmware">
+  <div class="wrap">
+    <div class="eyebrow">Firmware</div>
+    <h2>What runs on each board</h2>
+    <p class="lead">Both sketches build in the Arduino IDE. The ESP32 uses FreeRTOS tasks so that audio is never blocked by WiFi;
+      the ESP8266 runs one non-blocking loop with microsecond-timed sampling.</p>
+    <div class="grid-2">
+      <div class="card">
+        <h3>ESP32: three tasks</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Task</th><th>Core / priority</th><th>Job</th></tr></thead>
+          <tbody>
+            <tr><td>audio</td><td>1 / 10</td><td>Reads 20 ms I2S frames, removes DC offset, runs an energy-based speech detector with an adaptive noise floor and a 300 ms pre-roll</td></tr>
+            <tr><td>net</td><td>0 / 5</td><td>Owns the WebSocket; sends audio in 60 ms batches; a 1.3 s queue rides out WiFi stalls</td></tr>
+            <tr><td>coordinator</td><td>0 / 3</td><td>Samples the MPU6050 at 32 Hz, finds the ESP8266, relays <code>START</code> with retries, reports status every second</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <h3>ESP8266: one loop</h3>
+        <ul class="clean">
+          <li>Built-in ADS1115 driver (no library): single-shot conversions at 860 SPS, both channels every 15.6 ms → <strong>64 Hz</strong></li>
+          <li>8 samples per UDP packet, each tagged with a sample index</li>
+          <li>Broadcasts a heartbeat every second, so it needs no IP configuration</li>
+          <li>Collect LED on D5; the on-board LED blinks once per second to show it's alive</li>
+          <li>Ignores duplicate <code>START</code>s, stops on <code>STOP</code> or after the duration, then reports <code>DONE</code></li>
+        </ul>
+      </div>
+    </div>
+    <h3>Credentials stay out of the code</h3>
+    <p>WiFi name, password and laptop IP live in a gitignored <code>.env</code> file. A script generates a <code>secrets.h</code> header for each board,
+      which <code>config.h</code> includes at compile time. If it's missing, the build stops with instructions instead of producing firmware that can't connect.</p>
+<pre><code>cp .env.example .env            # WIFI_SSID, WIFI_PASSWORD, LAPTOP_IP
+python3 tools/make_secrets.py   # → src/secrets.h, esp8266_vitals/src/secrets.h</code></pre>
+  </div>
+</section>
+
+<!-- ================================================================ WIRELESS -->
+<section id="wireless">
+  <div class="wrap">
+    <div class="eyebrow">Wireless communication</div>
+    <h2>The measurement, message by message</h2>
+    <p class="lead">Commands use a reliable relay with acknowledgements; sensor data uses lightweight UDP streams whose sample indices
+      reveal every lost packet. If the relay fails, the laptop reaches the ESP8266 directly.</p>
+    <div class="card"><svg class="diagram" id="seqDiagram" viewBox="0 0 1000 560" role="img" aria-label="Message sequence of a measurement"></svg></div>
+    <div class="grid-2" style="margin-top:24px">
+      <div>
+        <h3 style="margin-top:0">Ports</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Port</th><th>Protocol</th><th>Content</th></tr></thead>
+          <tbody>
+            <tr><td>8765</td><td>WebSocket</td><td>ESP32 ⇄ laptop: audio, status, commands</td></tr>
+            <tr><td>4210</td><td>UDP</td><td>→ ESP8266: <code>START</code>, <code>STOP</code></td></tr>
+            <tr><td>4211</td><td>UDP</td><td>ESP8266 → laptop: PPG + GSR</td></tr>
+            <tr><td>4212</td><td>UDP broadcast</td><td>ESP8266 heartbeat, <code>ACK</code>, <code>DONE</code></td></tr>
+            <tr><td>4213</td><td>UDP</td><td>ESP32 → laptop: MPU6050</td></tr>
+            <tr><td>8080</td><td>HTTP + WebSocket</td><td>dashboard in the browser</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div>
+        <h3 style="margin-top:0">Reliability by design</h3>
+        <ul class="clean">
+          <li><strong>Discovery:</strong> the ESP32 learns the ESP8266's IP from its broadcast heartbeat.</li>
+          <li><strong>Acknowledged commands:</strong> <code>START</code> is re-sent every 250 ms (up to 6×) until <code>ACK</code>, alternating unicast and broadcast.</li>
+          <li><strong>Fallback path:</strong> no ACK within 2 s → the laptop sends <code>START</code> itself.</li>
+          <li><strong>Loss accounting:</strong> sample indices expose gaps; loss % is shown live and saved with each session, and gaps are interpolated before analysis.</li>
+          <li><strong>Link monitoring:</strong> RSSI of both boards, packet rate and loss per stream appear on the dashboard.</li>
+        </ul>
+<pre><code>P,&lt;id&gt;,&lt;first_index&gt;,8,&lt;ppg&gt;,&lt;gsr&gt;,…     ESP8266 data, 125 ms
+A,&lt;id&gt;,&lt;first_index&gt;,8,&lt;ax&gt;,&lt;ay&gt;,&lt;az&gt;,…  ESP32 motion, 250 ms
+HB,esp8266,&lt;rssi&gt;,&lt;collecting&gt;,…         heartbeat, 1 Hz</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ VOICE -->
+<section id="voice">
+  <div class="wrap">
+    <div class="eyebrow">Voice interface</div>
+    <h2>Hands-free control</h2>
+    <div class="grid-2">
+      <div>
+        <p>Speech detection runs <strong>on the ESP32</strong>: only actual speech is streamed, starting 300 ms before the detected onset so no word gets cut off.
+          On the laptop, Moonshine turns the audio into text.</p>
+        <p>Commands are matched with <strong>fuzzy rules</strong>, not by a language model, so they work every time, even when the speech-to-text hears
+          "measure my <em>dress</em> level". Anything else is answered by an optional local assistant.</p>
+        <p>While the laptop speaks, it <strong>mutes the ESP32's microphone</strong>, so the system never hears and answers its own voice.</p>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Say</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td>“measure my stress level”</td><td>60 s measurement → spoken result</td></tr>
+          <tr><td>“calibrate my baseline”</td><td>3 min relaxed recording → personal baseline</td></tr>
+          <tr><td>“check my signals”</td><td>30 s live signal check, no prediction</td></tr>
+          <tr><td>“stop”</td><td>cancels a running measurement</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ ML -->
+<section id="ml">
+  <div class="wrap">
+    <div class="eyebrow">Machine learning</div>
+    <h2>Learning stress from the WESAD study</h2>
+    <p class="lead"><strong>WESAD</strong> (Schmidt et al., 2018) recorded 15 people during a neutral baseline, a stress test (the Trier Social Stress Test:
+      a public speech plus mental arithmetic) and an amusement condition. Our sensors match its <strong>wrist device</strong>, the Empatica E4,
+      so the model is trained on those wrist signals, at the same sampling rates.</p>
+
+    <div class="table-wrap"><table>
+      <thead><tr><th>WESAD wrist signal</th><th>Our sensor</th><th class="num">Rate</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td>BVP (photoplethysmogram)</td><td>analog PPG via ADS1115</td><td class="num">64 Hz</td><td>heart rate, heart-rate variability</td></tr>
+        <tr><td>EDA (µS)</td><td>Grove GSR via ADS1115</td><td class="num">64 → 4 Hz</td><td>skin conductance level and responses</td></tr>
+        <tr><td>ACC (g)</td><td>MPU6050</td><td class="num">32 Hz</td><td>recorded and shown, <em>not</em> used for the prediction (see below)</td></tr>
+        <tr><td>TEMP</td><td>—</td><td class="num">—</td><td>no sensor</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>The pipeline</h3>
+    <div class="grid-4">
+      <div class="card"><h4>1 · Window</h4><p>60 s segments inside each condition, 5 s apart → 6124 windows.</p></div>
+      <div class="card"><h4>2 · Features</h4><p>44 features. <strong>Heart:</strong> HR, SDNN, RMSSD, pNN50, LF/HF power. <strong>Skin:</strong> level, slope, tonic/phasic split, response peaks. <strong>Motion:</strong> magnitude, variability.</p></div>
+      <div class="card"><h4>3 · Personalise</h4><p>Optionally express each feature relative to the user's relaxed baseline, which cancels person and sensor offsets.</p></div>
+      <div class="card"><h4>4 · Classify</h4><p>Five classifiers from the paper. Each is tested on a person it has never seen (leave-one-subject-out).</p></div>
+    </div>
+
+    <h3>Built to transfer to different hardware</h3>
+    <ul class="clean">
+      <li><strong>One feature module</strong> serves both training and live inference, so the features match exactly.</li>
+      <li>From the PPG, only <strong>beat timing</strong> is used, never amplitude, which depends on the sensor, the LED and the skin.</li>
+      <li>Fingertip GSR reads higher than wrist EDA; the <strong>personal baseline</strong> divides skin features by the user's own level, cancelling the gain difference.</li>
+      <li>Per-axis acceleration means are dropped, because our sensor's orientation differs from the E4's.</li>
+      <li>The beat detector was validated on WESAD itself: wrist-PPG heart rate vs. chest ECG gives <strong>MAE 4.1 bpm, r = 0.91</strong> over 215 one-minute windows.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ RESULTS -->
+<section id="results">
+  <div class="wrap">
+    <div class="eyebrow">Results</div>
+    <h2>How well it detects stress</h2>
+    <p class="lead">Leave-one-subject-out: train on 14 people, test on the 15th, repeated for everyone. The scores therefore describe
+      performance on a <strong>new person</strong>. Black ticks mark the best wrist result reported in the WESAD paper.</p>
+
+    <div class="card chart-card">
+      <div class="chart-head">
+        <div><h3 id="accTitle">Stress vs. no stress: accuracy by sensor set</h3><p class="muted">best classifier per bar · hover for details</p></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="icon-btn" data-task="binary" aria-pressed="true">2 classes</button>
+          <button class="icon-btn" data-task="3class" aria-pressed="false">3 classes</button>
+        </div>
+      </div>
+      <div class="legend"><span><i style="background:var(--series-1)"></i>raw features</span><span><i style="background:var(--series-2)"></i>with personal baseline</span><span><i class="tick"></i>WESAD paper (wrist)</span></div>
+      <div class="chart" id="accChart"></div>
+      <button class="toggle-table" id="accTableBtn">Show as table</button>
+      <div class="table-wrap hidden" id="accTable" style="margin-top:10px"></div>
+    </div>
+
+    <div class="grid-2" style="margin-top:24px">
+      <div class="card chart-card">
+        <div class="chart-head"><div><h3>Where it errs</h3><p class="muted">deployed model (AdaBoost, pulse + skin, personal baseline) · share of each true class</p></div></div>
+        <div id="confusion"></div>
+      </div>
+      <div class="card chart-card">
+        <div class="chart-head"><div><h3>Accuracy per person</h3><p class="muted">stress vs. no stress, deployed model · each bar is one held-out subject</p></div></div>
+        <div class="chart" id="subjChart"></div>
+      </div>
+    </div>
+
+    <h3>What the results taught us</h3>
+    <div class="grid-2">
+      <div class="callout warn"><span class="t">Motion alone "detects" stress too well</span>
+        <p>The accelerometer alone reached 87.5 % accuracy, against about 70 % in the paper. WESAD participants moved while giving their stress-test speech,
+          so motion partly gives the label away. A seated, still user would then look unstressed. Pulse and skin alone score the same
+          (94.7 % vs. 94.9 %), so <strong>the deployed model ignores motion</strong>.</p></div>
+      <div class="callout"><span class="t">Personal calibration pays off</span>
+        <p>Comparing each person with their own relaxed baseline lifts stress detection from 91.2 % to <strong>94.7 %</strong>. Skin conductance gains most
+          (3-class: 60.8 % → 74.0 %), which makes sense: its absolute level differs a lot between people.</p></div>
+      <div class="callout"><span class="t">Amusement is subtle</span>
+        <p>As in the paper, amusement is mostly mistaken for baseline: watching funny clips barely changes the body's signals. Stress itself is recognised reliably.</p></div>
+      <div class="callout"><span class="t">Better than the paper's wrist results, with fewer sensors</span>
+        <p>94.7 % against 88.3 % for stress detection, without a temperature sensor. The best model was selected on the same evaluation,
+          so the top figures are slightly optimistic; the paper's figures share that bias.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ DASHBOARD -->
+<section id="dashboard">
+  <div class="wrap">
+    <div class="eyebrow">Dashboard</div>
+    <h2>Everything visible, live</h2>
+    <p class="lead">The browser dashboard connects to the laptop server over a WebSocket and updates many times per second.</p>
+    <div class="grid-3">
+      <div class="card"><h3>System diagram</h3><p>Every sensor, board and software stage as a node. Nodes light up when active, wires animate while data flows, and the LED glows during collection.</p></div>
+      <div class="card"><h3>Stress estimate</h3><p>Gauge with stress probability and level, the 3-class state, heart rate, HRV, skin conductance, and the full table of 44 features.</p></div>
+      <div class="card"><h3>Live signals</h3><p>PPG waveform with running heart rate, skin conductance in µS, 3-axis acceleration and microphone level, with hover read-outs.</p></div>
+      <div class="card"><h3>Wireless links</h3><p>RSSI of both boards, sample rate and packet loss per stream, and which path started the measurement (relay or direct).</p></div>
+      <div class="card"><h3>Voice and log</h3><p>Transcripts, recognised commands, spoken replies, and a timestamped log of every link event (<code>START</code>, <code>ACK</code>, <code>DONE</code>).</p></div>
+      <div class="card"><h3>History and data</h3><p>P(stress) of past sessions. Each session's raw signals, features, prediction and link stats are saved for analysis.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ BUILD -->
+<section id="build">
+  <div class="wrap">
+    <div class="eyebrow">Build it</div>
+    <h2>From parts to first measurement</h2>
+    <p class="lead">The complete guide, with the expected serial output at every step, is
+      <a href="https://github.com/AmirMohammad-Nouri/edge-ai-stress-sense/blob/main/STEP_BY_STEP.md">STEP_BY_STEP.md</a>. In short:</p>
+    <div class="grid-2">
+      <div>
+        <h3 style="margin-top:0">1 · Boards (Arduino IDE)</h3>
+        <ul class="clean">
+          <li>Install the boards <strong>esp32</strong> (Espressif) and <strong>esp8266</strong>, and the libraries <strong>WebSockets</strong> and <strong>MPU6050_light</strong>.</li>
+          <li>Create <code>.env</code> and run <code>tools/make_secrets.py</code>.</li>
+          <li>Upload <code>esp8266_vitals.ino</code> (LOLIN D1 mini) and <code>esp32_voice.ino</code> (ESP32 Dev Module).</li>
+        </ul>
+        <h3>2 · Laptop</h3>
+<pre><code>python3 -m venv venv
+venv/bin/pip install -r tools/requirements.txt
+venv/bin/python tools/stress_server.py --no-llm
+# open http://localhost:8080</code></pre>
+      </div>
+      <div>
+        <h3 style="margin-top:0">3 · Model</h3>
+<pre><code>venv/bin/python -I tools/ml/wesad_extract.py
+venv/bin/python -I tools/ml/build_dataset.py
+venv/bin/python -I tools/ml/train.py --deploy-features physio</code></pre>
+        <p class="muted">The WESAD dataset is downloaded separately from its authors.</p>
+        <h3>4 · Use</h3>
+        <ul class="clean">
+          <li>Set the GSR zero with the electrodes off.</li>
+          <li>“calibrate my baseline” (3 min, relaxed).</li>
+          <li>“measure my stress level” (60 s, still and silent).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout"><span class="t">No hardware? Run the simulator.</span>
+      <p><code>tools/sim_devices.py</code> impersonates both boards with the exact firmware protocol and replays real WESAD recordings, with optional packet loss.
+        Features computed through the simulated wireless path match the direct computation (heart rate 102.8 vs. 102.9 bpm at 2 % packet loss).</p></div>
+  </div>
+</section>
+
+<!-- ================================================================ LIMITATIONS -->
+<section id="limitations">
+  <div class="wrap">
+    <div class="eyebrow">Limitations</div>
+    <h2>What this is, and isn't</h2>
+    <div class="grid-2">
+      <ul class="clean">
+        <li><strong>Not a medical device.</strong> The model learned from 15 young, mostly male people in a lab. Its output is an estimate, not a diagnosis.</li>
+        <li><strong>Different hardware:</strong> fingertip sensors and a hobby PPG differ from the Empatica E4. Personal calibration narrows the gap, but accuracy on this hardware hasn't been measured against ground truth.</li>
+      </ul>
+      <ul class="clean">
+        <li><strong>Wrist-PPG variability is noisy:</strong> heart rate is reliable (r = 0.91 vs. ECG), but beat-to-beat measures such as RMSSD agree poorly with ECG.</li>
+        <li><strong>Credentials are compiled into the firmware</strong> and can be read from a board by anyone with physical access.</li>
+      </ul>
+    </div>
+    <h3>References</h3>
+    <ol class="clean">
+      <li>P. Schmidt, A. Reiss, R. Duerichen, C. Marberger, K. Van Laerhoven. <em>Introducing WESAD, a Multimodal Dataset for Wearable Stress and Affect Detection.</em> ICMI 2018. <a href="https://doi.org/10.1145/3242969.3242985">doi:10.1145/3242969.3242985</a></li>
+      <li>C. Kirschbaum, K. Pirke, D. Hellhammer. <em>The Trier Social Stress Test.</em> Neuropsychobiology 28, 1993.</li>
+      <li>S. Kreibig. <em>Autonomic nervous system activity in emotion: A review.</em> Biological Psychology 84(3), 2010.</li>
+      <li>Task Force of the ESC and NASPE. <em>Heart rate variability: standards of measurement.</em> European Heart Journal 17, 1996.</li>
+      <li>Seeed Studio. <a href="https://wiki.seeedstudio.com/Grove-GSR_Sensor/">Grove – GSR Sensor</a>.</li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  <p>Edge AI Stress Sense · a wireless measurement project by
+    <a href="https://github.com/AmirMohammad-Nouri">AmirMohammad Nouri</a> ·
+    <a href="https://github.com/AmirMohammad-Nouri/edge-ai-stress-sense">source on GitHub</a></p>
+  <p>WESAD data © its authors, used for non-commercial research. This system is not a medical device.</p>
+</footer>
+
+<div class="tip hidden" id="tip"></div>
+<script src="assets/site.js"></script>
+</body>
+</html>
