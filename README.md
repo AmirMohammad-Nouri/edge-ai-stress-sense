@@ -120,17 +120,15 @@ stress level. The result is spoken back and shown on a live dashboard.
 
 Everything runs at **3.3 V**. The boards are **not** wired to each other; they communicate over WiFi only.
 
-```
-        ESP32 DevKitC                                         ESP8266 D1 mini
-   ┌───────────────────────────┐                      ┌────────────────────────────────┐
-   │ GPIO26 ── SCK  INMP441    │                      │ D2 ─── SDA  ADS1115  A0 ◄─ PPG S │
-   │ GPIO25 ── WS   (L/R→GND)  │       WiFi           │ D1 ─── SCL  (ADDR→GND) A1 ◄─ GSR │
-   │ GPIO27 ── SD              │  ◄──────────────►    │                                  │
-   │ GPIO21 ── SDA  MPU6050    │                      │ D5 ── 220 Ω ──►|── GND   (LED)   │
-   │ GPIO32 ── SCL  (AD0→GND)  │                      │ 3V3 → ADS VDD, PPG +, GSR VCC    │
-   │ 3V3 → mic VDD, MPU VCC    │                      │ G   → all GNDs                   │
-   └───────────────────────────┘                      └────────────────────────────────┘
-```
+**ESP32 node:** microphone and accelerometer
+
+![ESP32 DevKitC wired to an INMP441 microphone and an MPU6050 (GY-521) accelerometer, with 3.3 V and GND from a breadboard power rail](docs/images/wiring_esp32.svg)
+
+**ESP8266 node:** pulse, skin conductance and the collect LED
+
+![WeMos D1 mini wired to an ADS1115 ADC, which reads the PPG pulse sensor and the Grove GSR sensor, plus an LED with a 220 ohm resistor on D5](docs/images/wiring_esp8266.svg)
+
+<sub>Illustrations are generated from the real pin orders by `docs/images/draw_wiring.py`. Rerun it after changing a pin.</sub>
 
 | Board | Device | Pins |
 |---|---|---|
