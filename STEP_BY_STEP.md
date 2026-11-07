@@ -126,7 +126,7 @@ If any check fails → see "Hardware troubleshooting" in README.md.
 ### 4.1 Wire it (unplugged)
 1. **Power rails**: ESP32 `3V3` → + rail, `GND` → − rail.
 2. **INMP441**: `VDD`→3V3, `GND`→GND, `SCK`→**GPIO26**, `WS`→**GPIO25**, `SD`→**GPIO27**, `L/R`→**GND**.
-3. **MPU6050**: `VCC`→3V3, `GND`→GND, `SCL`→**GPIO22**, `SDA`→**GPIO21**, `AD0`→GND.
+3. **MPU6050**: `VCC`→3V3, `GND`→GND, `SCL`→**GPIO32**, `SDA`→**GPIO21**, `AD0`→GND.
 
 ### 4.2 Flash it
 1. Arduino IDE: **File → Open** → `esp32_voice.ino` (in the repository root folder).

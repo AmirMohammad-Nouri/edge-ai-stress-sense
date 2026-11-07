@@ -83,7 +83,7 @@ constexpr size_t SESSION_ID_LEN   = 16;
 // =====================================================================
 // MPU6050 on the default ESP32 I2C pins. AD0 -> GND => address 0x68.
 constexpr int MPU_SDA_PIN = 21;
-constexpr int MPU_SCL_PIN = 22;
+constexpr int MPU_SCL_PIN = 32;   // GPIO34/35 can't be used: input-only, no output driver
 constexpr int MPU_SAMPLE_HZ      = 32;    // = Empatica E4 ACC rate used in WESAD
 constexpr int MPU_SAMPLES_PER_PKT = 8;    // 8 x 31.25 ms = 250 ms per UDP packet
 

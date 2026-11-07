@@ -15,7 +15,7 @@ ESP GPIOs and the ADS1115 inputs must stay at or below 3.3 V).
    │ GPIO27 ── SD                 │   UDP 4210 / 4212    │                A0 ◄── PPG signal    │
    │                              │                      │                A1 ◄── GSR SIG       │
    │ GPIO21 ── SDA  MPU6050       │                      │                                     │
-   │ GPIO22 ── SCL  (AD0→GND)     │                      │  D5 ── 220 Ω ──►|── GND  (LED)     │
+   │ GPIO32 ── SCL  (AD0→GND)     │                      │  D5 ── 220 Ω ──►|── GND  (LED)     │
    │ GPIO2  ── on-board LED       │                      │  D4 = on-board blue LED (alive)    │
    └──────────────────────────────┘                      └───────────────────────────────────┘
 ```
@@ -33,7 +33,7 @@ ESP GPIOs and the ADS1115 inputs must stay at or below 3.3 V).
 | MPU6050 | VCC | 3V3 | the GY-521 board has its own regulator and works from 3.3 V |
 | | GND | GND | |
 | | SDA | **GPIO21** | default `Wire` SDA on the ESP32 |
-| | SCL | **GPIO22** | default `Wire` SCL on the ESP32 |
+| | SCL | **GPIO32** | any output-capable pin works for I2C; 32 sits next to 34/35 on the header. GPIO34–39 can't be used (input-only, no pull-ups) |
 | | AD0 | GND (or open) | I2C address 0x68 |
 | | INT, XDA, XCL | not connected | |
 | Status LED | — | **GPIO2** (on-board) | on while a measurement runs |

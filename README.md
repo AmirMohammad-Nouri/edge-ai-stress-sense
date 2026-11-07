@@ -65,7 +65,7 @@ other; they talk over WiFi. Each board is powered from its own USB cable.
    │ GPIO25 ── WS   (L/R→GND)  │       WiFi           │ D1 ─── SCL  (ADDR→GND) A1 ◄─ GSR │
    │ GPIO27 ── SD              │  ◄──────────────►    │                                  │
    │ GPIO21 ── SDA  MPU6050    │                      │ D5 ── 220 Ω ──►|── GND   (LED)   │
-   │ GPIO22 ── SCL  (AD0→GND)  │                      │ 3V3 → ADS VDD, PPG +, GSR VCC    │
+   │ GPIO32 ── SCL  (AD0→GND)  │                      │ 3V3 → ADS VDD, PPG +, GSR VCC    │
    │ 3V3 → mic VDD, MPU VCC    │                      │ G   → all GNDs                   │
    └───────────────────────────┘                      └────────────────────────────────┘
 ```
@@ -78,7 +78,7 @@ other; they talk over WiFi. Each board is powered from its own USB cable.
 | | SCK / WS / SD | GPIO26 / GPIO25 / GPIO27 |
 | | L/R | GND (must not float) |
 | MPU6050 | VCC / GND | 3V3 / GND |
-| | SDA / SCL | GPIO21 / GPIO22 |
+| | SDA / SCL | GPIO21 / GPIO32 |
 | | AD0 | GND (address 0x68) |
 | Status LED | — | GPIO2 (on-board, on while measuring) |
 
@@ -125,7 +125,7 @@ Do these in order. Each step tells you what you should see before you move on.
 **B. ESP32** (`src/config.h`: `WIFI_SSID`, `WIFI_PASSWORD`, `WS_HOST` = laptop IP; find it with `hostname -I`)
 1. In the Arduino IDE, open `esp32_voice.ino` (repo root), choose the board **ESP32 Dev Module**, click Upload,
    then open the Serial Monitor at 115200 baud. **Keep the MPU6050 still** during boot.
-2. Serial shows `[mpu] calibrating gyro ...` then `[mpu] ready`. `MPU6050 init failed` → check SDA=21, SCL=22, 3V3, AD0.
+2. Serial shows `[mpu] calibrating gyro ...` then `[mpu] ready`. `MPU6050 init failed` → check SDA=21, SCL=32, 3V3, AD0.
 3. Serial shows `[wifi] connected, IP ...`.
 4. Within ~2 s: `[coord] ESP8266 found at 192.168.x.y`. If it never appears, your router may block
    broadcast (AP/client isolation): set `ESP8266_STATIC_IP` in `src/config.h` to the IP from step A4.
@@ -169,7 +169,7 @@ Do these in order. Each step tells you what you should see before you move on.
 | `[coord] ESP8266 found` never appears | both boards not on the same WiFi/subnet, or the router blocks broadcast → set `ESP8266_STATIC_IP` |
 | Dashboard: ESP8266 offline, but the ESP32 sees it | laptop firewall blocks UDP 4212 → open it (the dashboard then shows the ESP8266 "via ESP32") |
 | Measurement says "No data arrived from the ESP8266" | UDP 4211 blocked on the laptop, or the laptop changed its IP (update `WS_HOST`) |
-| MPU6050 "not found" | SDA=21/SCL=22 swapped; AD0 floating on some clones → tie it to GND |
+| MPU6050 "not found" | SDA=21/SCL=32 swapped; AD0 floating on some clones → tie it to GND |
 | Large packet loss (> 10 %) | weak WiFi (RSSI below −75 dBm) → move the boards closer to the router |
 | Board resets when the mic or LED is plugged in | wire on a boot pin (see "Don't use these pins") or a 5 V supply on a sensor |
 
