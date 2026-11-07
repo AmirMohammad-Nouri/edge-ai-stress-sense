@@ -71,20 +71,31 @@ install [Ollama](https://ollama.com), then run `ollama pull qwen3:1.7b` and `oll
 All three devices must be on the **same WiFi network** (2.4 GHz, because the ESPs can't use 5 GHz).
 
 1. Find the laptop's IP: `hostname -I` (e.g. `192.168.1.127`).
-2. Edit **`src/config.h`** (ESP32) in a text editor. The Arduino IDE does not show files
-   inside `src/` as tabs, so use VS Code, gedit, or `nano src/config.h`:
-   ```cpp
-   #define WIFI_SSID      "your-wifi"
-   #define WIFI_PASSWORD  "your-password"
-   #define WS_HOST        "192.168.1.127"   // laptop IP from step 1
+2. In the project folder, create your private settings file from the template:
+   ```bash
+   cp .env.example .env
+   nano .env            # or any text editor
    ```
-3. Edit **`esp8266_vitals/src/config.h`** with the **same** SSID and password. No IP is needed here.
+   and fill it in:
+   ```
+   WIFI_SSID=your-wifi
+   WIFI_PASSWORD=your-password
+   LAPTOP_IP=192.168.1.127
+   ```
+3. Generate the firmware settings for both boards:
+   ```bash
+   python3 tools/make_secrets.py
+   ```
+   This writes `src/secrets.h` (ESP32) and `esp8266_vitals/src/secrets.h` (ESP8266).
+   `.env` and both `secrets.h` files are in `.gitignore`, so your WiFi password is never committed.
+   If you forget this step, the Arduino IDE stops with "Missing ... secrets.h" and tells you what to run.
 4. Open the laptop firewall:
    ```bash
    sudo ufw allow 8765/tcp; sudo ufw allow 4211:4213/udp; sudo ufw allow 8080/tcp
    ```
 
-> If your laptop's IP changes (e.g. after a reconnect), update `WS_HOST` and re-flash the ESP32.
+> If your laptop's IP changes (e.g. after a reconnect), update `LAPTOP_IP` in `.env`, run
+> `python3 tools/make_secrets.py` again and re-upload the ESP32.
 > Giving the laptop a fixed IP (a DHCP reservation in the router) avoids this.
 
 ---

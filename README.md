@@ -113,7 +113,10 @@ WESAD's wrist device was worn on the **non-dominant wrist**. Copy that:
 
 Do these in order. Each step tells you what you should see before you move on.
 
-**A. ESP8266 vitals node** (`esp8266_vitals/src/config.h`: set `WIFI_SSID`, `WIFI_PASSWORD`)
+**0. Credentials (once):** `cp .env.example .env`, put your WiFi name, password and the laptop IP (`hostname -I`) in `.env`,
+then run `python3 tools/make_secrets.py`. This writes `src/secrets.h` and `esp8266_vitals/src/secrets.h`; all three files are gitignored.
+
+**A. ESP8266 vitals node**
 1. Wire only the ADS1115 and the LED first. In the Arduino IDE, open `esp8266_vitals/esp8266_vitals.ino`, choose the
    board **LOLIN(WEMOS) D1 R2 & mini**, click Upload, then open the Serial Monitor at 115200 baud.
 2. At boot the **external LED flashes once** (300 ms). No flash → check the LED polarity and the resistor on D5.
@@ -122,7 +125,7 @@ Do these in order. Each step tells you what you should see before you move on.
 5. Serial shows `[vitals] idle, listening on UDP 4210 ...`. From now on, the blue LED blinks briefly once per second (alive).
 6. Now connect the PPG (A0) and GSR (A1) and reset the board.
 
-**B. ESP32** (`src/config.h`: `WIFI_SSID`, `WIFI_PASSWORD`, `WS_HOST` = laptop IP; find it with `hostname -I`)
+**B. ESP32**
 1. In the Arduino IDE, open `esp32_voice.ino` (repo root), choose the board **ESP32 Dev Module**, click Upload,
    then open the Serial Monitor at 115200 baud. **Keep the MPU6050 still** during boot.
 2. Serial shows `[mpu] calibrating gyro ...` then `[mpu] ready`. `MPU6050 init failed` → check SDA=21, SCL=32, 3V3, AD0.
@@ -168,7 +171,7 @@ Do these in order. Each step tells you what you should see before you move on.
 | GSR reads but is flat | electrodes loose; the Grove board's potentiometer turned to an end stop |
 | `[coord] ESP8266 found` never appears | both boards not on the same WiFi/subnet, or the router blocks broadcast → set `ESP8266_STATIC_IP` |
 | Dashboard: ESP8266 offline, but the ESP32 sees it | laptop firewall blocks UDP 4212 → open it (the dashboard then shows the ESP8266 "via ESP32") |
-| Measurement says "No data arrived from the ESP8266" | UDP 4211 blocked on the laptop, or the laptop changed its IP (update `WS_HOST`) |
+| Measurement says "No data arrived from the ESP8266" | UDP 4211 blocked on the laptop, or the laptop changed its IP (update `LAPTOP_IP` in `.env`, run `tools/make_secrets.py`, re-upload the ESP32) |
 | MPU6050 "not found" | SDA=21/SCL=32 swapped; AD0 floating on some clones → tie it to GND |
 | Large packet loss (> 10 %) | weak WiFi (RSSI below −75 dBm) → move the boards closer to the router |
 | Board resets when the mic or LED is plugged in | wire on a boot pin (see "Don't use these pins") or a 5 V supply on a sensor |
@@ -176,11 +179,11 @@ Do these in order. Each step tells you what you should see before you move on.
 ## Quick start
 
 1. **Wire it up and run the bring-up checklist** (section above), or follow [STEP_BY_STEP.md](STEP_BY_STEP.md).
-2. **ESP32**: in `src/config.h` set `WIFI_SSID`, `WIFI_PASSWORD`, and `WS_HOST` = the laptop's LAN IP.
-   Arduino IDE: open `esp32_voice.ino`, board **ESP32 Dev Module** (core "esp32 by Espressif"), libraries
+2. **Credentials**: `cp .env.example .env`, fill in `WIFI_SSID`, `WIFI_PASSWORD`, `LAPTOP_IP`, then
+   `python3 tools/make_secrets.py` (generates the gitignored `secrets.h` for both boards; nothing secret is committed).
+   **ESP32** in the Arduino IDE: open `esp32_voice.ino`, board **ESP32 Dev Module** (core "esp32 by Espressif"), libraries
    **WebSockets** (Markus Sattler) + **MPU6050_light** (rfetick) → Upload.
-3. **ESP8266**: in `esp8266_vitals/src/config.h` set the same `WIFI_SSID` / `WIFI_PASSWORD`. No IP needed.
-   Arduino IDE: open `esp8266_vitals/esp8266_vitals.ino`, board **LOLIN(WEMOS) D1 R2 & mini**, no extra
+3. **ESP8266** in the Arduino IDE: open `esp8266_vitals/esp8266_vitals.ino`, board **LOLIN(WEMOS) D1 R2 & mini**, no extra
    libraries → Upload. At boot, the LED flashes once and the serial log says `ADS1115 ... OK`.
    (PlatformIO works too: `pio run -t upload` in the repo root and in `esp8266_vitals/`.)
 4. **Laptop**: open the firewall ports (`docs/PROTOCOL.md`), then
@@ -244,7 +247,7 @@ Keep wires short (<15 cm) and don't leave L/R floating. Avoid GPIO 0/2/5/12/15 (
 ## 2. Software setup
 
 1. Install VS Code + the **PlatformIO** extension (or `pip install platformio`).
-2. Open this folder. Edit `src/config.h`: `WIFI_SSID`, `WIFI_PASSWORD`, `WS_HOST` (LAN IP of the PC running the server).
+2. Open this folder. Put `WIFI_SSID`, `WIFI_PASSWORD`, `LAPTOP_IP` in `.env` and run `python3 tools/make_secrets.py` (writes the gitignored `src/secrets.h`).
 3. Build & flash: `pio run -t upload` then `pio device monitor`.
    - Native "USB" port instead of "UART" port? Uncomment `-DARDUINO_USB_CDC_ON_BOOT=1` in `platformio.ini`.
 4. On the PC: `pip install websockets` then `python tools/test_server.py`.
@@ -290,7 +293,7 @@ On connect the device also sends `{"type":"hello",...}`. To stream to Moonshine 
 
 ```
 platformio.ini
-src/config.h                  all tunables
+src/config.h                  all tunables (WiFi/IP come from the gitignored src/secrets.h)
 src/main.cpp                  WiFi + task startup
 src/audio/microphone.*        I2S 32→16 bit, DC blocker
 src/audio/audio_buffer.h      frame ring (pre-roll)
@@ -312,6 +315,6 @@ Replacing the VAD later = implement `IVad` and change one line in `main.cpp`.
 | `I2S read failed/timeout` | wiring / wrong pins; L/R pin floating |
 | rms always ~0 | wrong channel (L/R vs `MIC_USE_LEFT_CHANNEL`), SD pin wrong |
 | rms stuck high, always SPEAKING | `MIC_SHIFT` too low (clipping) or noisy supply |
-| `[ws]` never connects | wrong `WS_HOST`, firewall, server not running |
+| `[ws]` never connects | wrong `LAPTOP_IP` in `.env` (re-run `tools/make_secrets.py`), firewall, server not running |
 | `driver/i2s.h` deprecation warnings | harmless: it compiles on ESP32 core 3.3.x. If the mic then gives no audio, install core **2.0.17** (Boards Manager) or use PlatformIO (`espressif32@6.9.0`) |
 | Board reboots at boot on GPIO 33-37 | those are octal PSRAM pins on N8R8 modules; use the default pins |

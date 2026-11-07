@@ -10,3 +10,8 @@ venv
 tools/ml/cache
 tools/data
 __pycache__
+
+# Credentials: edit .env, then run tools/make_secrets.py
+.env
+src/secrets.h
+esp8266_vitals/src/secrets.h

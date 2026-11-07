@@ -1,7 +1,7 @@
 # Wireless protocol
 
 All three devices must be on the **same WiFi network**. The laptop IP is
-configured only on the ESP32 (`WS_HOST`). The ESP8266 needs no IPs: it is
+configured only for the ESP32 (`LAPTOP_IP` in `.env` → `WS_HOST`). The ESP8266 needs no IPs: it is
 discovered from its broadcast heartbeats, and every START command tells it where to send data.
 
 ## Ports

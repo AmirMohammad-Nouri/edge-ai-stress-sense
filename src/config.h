@@ -6,12 +6,14 @@
 //  EDIT THESE
 // =====================================================================
 
-// ---- WiFi -----------------------------------------------------------
-#define WIFI_SSID      "your-wifi-name"  // SSID of your WiFi network
-#define WIFI_PASSWORD  "your-wifi-password"  // WiFi password
+// ---- WiFi + laptop IP: set in .env (see .env.example) ------------------
+#if __has_include("secrets.h")
+#include "secrets.h"   // WiFi credentials + laptop IP - generated from .env, gitignored
+#else
+#error "Missing src/secrets.h. Run: cp .env.example .env (edit it), then: python3 tools/make_secrets.py"
+#endif
 
 // ---- Python server (WebSocket) --------------------------------------
-#define WS_HOST     "192.168.1.127"   // IP / hostname of the machine running the server
 #define WS_PORT     8765
 #define WS_PATH     "/audio"
 #define WS_USE_TLS  0                // 1 => wss:// (uses more RAM)

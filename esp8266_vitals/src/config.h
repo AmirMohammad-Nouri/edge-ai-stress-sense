@@ -3,9 +3,12 @@
 // read through an ADS1115, plus a status LED that is ON while collecting.
 // Full pin table: docs/PINOUT.md
 
-// ---- WiFi (same network as the ESP32 and the laptop) -------------------
-#define WIFI_SSID      "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD  "YOUR_WIFI_PASSWORD"
+// ---- WiFi: set in .env (see .env.example) ------------------------------
+#if __has_include("secrets.h")
+#include "secrets.h"   // WiFi credentials - generated from .env, gitignored
+#else
+#error "Missing esp8266_vitals/src/secrets.h. Run: cp .env.example .env (edit it), then: python3 tools/make_secrets.py"
+#endif
 
 // ---- UDP ports (must match src/config.h on the ESP32 and tools/stress/config.py)
 constexpr uint16_t PORT_CONTROL = 4210;   // this node listens here for START/STOP
