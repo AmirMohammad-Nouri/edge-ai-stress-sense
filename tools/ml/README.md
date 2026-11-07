@@ -70,12 +70,22 @@ venv/bin/python -I tools/ml/build_dataset.py
 venv/bin/python -I tools/ml/train.py --quick
 
 # 3b) full benchmark like the paper: DT, RF, AdaBoost, LDA, kNN
-#     x {bvp, eda, acc, physio, all} x {binary, 3class} x {abs, rel}, all LOSO   (a few minutes)
-venv/bin/python -I tools/ml/train.py
-
-#     use a different feature set for the deployed model, e.g. without motion:
+#     x {bvp, eda, acc, physio, all} x {binary, 3class} x {abs, rel}, all LOSO   (~4 min)
+#     and deploy the pulse + skin ("physio") models - the recommended setting:
 venv/bin/python -I tools/ml/train.py --deploy-features physio
 ```
+
+**Why `physio` (no motion) is deployed:** with the accelerometer alone, the binary task reaches 87.5 %
+(the paper: ~70 %). WESAD participants moved while giving the TSST speech, so motion leaks the label.
+A seated, still user would look "not stressed". Pulse + skin alone reach the same accuracy
+(binary 94.7 % vs. 94.9 % with motion), so motion is recorded and displayed but not used for prediction.
+
+| Deployed model | Classifier | LOSO accuracy | macro-F1 |
+|---|---|---|---|
+| `binary_rel` (personal baseline) | AdaBoost | 94.7 % | 93.8 % |
+| `binary_abs` (no baseline) | LDA | 91.2 % | 89.6 % |
+| `3class_rel` | AdaBoost | 74.8 % | 65.4 % |
+| `3class_abs` | kNN | 69.5 % | 59.1 % |
 
 What step 3 writes to `tools/ml/models/`:
 - `stress_model.joblib`: four deployed models (`binary_abs`, `binary_rel`, `3class_abs`, `3class_rel`).
@@ -87,7 +97,7 @@ Then restart `tools/stress_server.py`. It loads the model at startup, and the da
 
 Things worth trying for the report:
 - Compare the `abs` vs `rel` rows in `benchmark.md` to see how much personalisation helps.
-- Compare `physio` vs `all` (does motion help, or does it only pick up posture?).
+- Compare `physio` vs `all`, and look at the `acc`-only rows (motion alone predicts the stress condition suspiciously well).
 - Try a different window length (`WINDOW_S` in `features.py`; then rerun step 2, and change `MEASURE_S` in `tools/stress/config.py` to match).
 
 ## 3. Files

@@ -151,7 +151,7 @@ def main():
     jobs = [(t, f, n, c) for t in ("binary", "3class") for n in ("abs", "rel")
             for f in FEATURE_SETS for c in clfs]
     t0 = time.time()
-    results = Parallel(n_jobs=args.jobs, verbose=0)(
+    results = Parallel(n_jobs=args.jobs, verbose=10)(   # prints progress
         delayed(run_one)(Xd, y_all, subj, *j) for j in jobs)
     print(f"benchmark: {len(results)} LOSO runs in {time.time()-t0:.0f}s")
 
@@ -166,7 +166,7 @@ def main():
     # ---- deployable models: best classifier (by LOSO macro-F1) per task/norm
     fset = args.deploy_features
     cols = [ALL_FEATURES.index(f) for f in FEATURE_SETS[fset]]
-    bundle = {"features": FEATURE_SETS[fset], "all_features": ALL_FEATURES, "models": {},
+    bundle = {"features": FEATURE_SETS[fset], "feature_set": fset, "all_features": ALL_FEATURES, "models": {},
               "trained_on": "WESAD wrist (E4) BVP/EDA/ACC, 15 subjects",
               "window_s": 60, "created": time.strftime("%Y-%m-%d %H:%M")}
     for task in ("binary", "3class"):

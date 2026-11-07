@@ -197,7 +197,8 @@
       : `No personal baseline yet → population model. <b>Calibrate once while relaxed.</b>`;
     if (meas.model) {
       const b = meas.model.models[meas.baseline ? "binary_rel" : "binary_abs"];
-      $("normBadge").textContent = `${b.clf} · LOSO acc ${(100 * b.loso_accuracy).toFixed(0)} %`;
+      const fsName = { physio: "pulse + skin", all: "pulse + skin + motion", bvp: "pulse", eda: "skin", acc: "motion" }[meas.model.feature_set] || meas.model.feature_set;
+      $("normBadge").textContent = `${b.clf} · ${fsName} · LOSO acc ${(100 * b.loso_accuracy).toFixed(0)} %`;
     } else $("normBadge").textContent = "model not trained";
 
     // buttons
