@@ -20,8 +20,5 @@ esp8266_vitals/src/secrets.h
 submission/dist/
 submission/report/node_modules/
 
-# Raw video clips and edit outputs (large files)
-video/raw/
-video/out/
-video/*.jpeg
-video/build/
+# Demo video sources and edit (kept locally, not in the repo)
+video/

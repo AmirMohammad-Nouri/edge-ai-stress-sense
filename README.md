@@ -132,8 +132,6 @@ Everything runs at **3.3 V**. The boards are **not** wired to each other; they c
 
 ![WeMos D1 mini wired to an ADS1115 ADC, which reads the PPG pulse sensor and the Grove GSR sensor, plus an LED with a 220 ohm resistor on D5](docs/images/wiring_esp8266.svg)
 
-<sub>Illustrations are generated from the real pin orders by `docs/images/draw_wiring.py`. Rerun it after changing a pin.</sub>
-
 | Board | Device | Pins |
 |---|---|---|
 | ESP32 | INMP441 | SCK→GPIO26, WS→GPIO25, SD→GPIO27, L/R→GND, VDD→3V3 |
@@ -282,8 +280,6 @@ venv/bin/python -I tools/ml/train.py --deploy-features physio   # LOSO benchmark
 - **Loss handling:** every packet carries a sample index. Gaps are counted (loss %) and interpolated before feature extraction.
 - **Monitoring:** RSSI, sample rate and loss per link appear live on the dashboard and are stored with every session.
 
-Full packet formats and the message sequence: **[docs/PROTOCOL.md](docs/PROTOCOL.md)**.
-
 ## Testing without hardware
 
 `tools/sim_devices.py` impersonates both boards using the exact firmware protocol, and can replay real WESAD recordings:
@@ -317,8 +313,7 @@ Options: `--condition baseline|stress|amusement`, `--loss 0.05` (simulated packe
 │   └── voice_agent_server.py    speech-to-text / LLM / text-to-speech building blocks
 ├── docs/
 │   ├── PINOUT.md                pin choices and wiring details
-│   ├── PROTOCOL.md              wireless protocol specification
-│   └── VOICE_PIPELINE.md        ESP32 audio pipeline and voice-detection tuning
+│   └── index.html, images/      project website and wiring illustrations
 ├── STEP_BY_STEP.md              complete build guide (Arduino IDE)
 └── .env.example                 credential template
 ```
@@ -338,7 +333,7 @@ Options: `--condition baseline|stress|amusement`, `--loss 0.05` (simulated packe
 | GSR "not worn" | GSR zero was set while wearing it; redo it with the electrodes off |
 | Packet loss > 10 % | weak signal (RSSI < −75 dBm): move closer to the router |
 
-More, including microphone tuning: [STEP_BY_STEP.md](STEP_BY_STEP.md), [docs/VOICE_PIPELINE.md](docs/VOICE_PIPELINE.md).
+More, including microphone tuning: [STEP_BY_STEP.md](STEP_BY_STEP.md).
 
 ## Limitations
 
