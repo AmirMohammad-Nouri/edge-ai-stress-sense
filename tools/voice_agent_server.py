@@ -24,6 +24,7 @@ import re
 import time
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable
 
 import numpy as np
@@ -276,14 +277,13 @@ def make_handler(pipeline: VoicePipeline):
 
 
 async def main():
-    stt = MoonshineStreamSTT(
-        "/home/arshix/projects/wireless_project/esp32_voice/tools/quantized_26_08_21"
-    )
+    tools_dir = Path(__file__).resolve().parent
+    stt = MoonshineStreamSTT(str(tools_dir / "quantized_26_08_21"))
 
     agent = LangGraphAgent(MCP_SERVERS)
     await agent.init()
 
-    tts = PiperTTS("/home/arshix/projects/wireless_project/esp32_voice/tools/TTS-model/en_US-lessac-medium.onnx")
+    tts = PiperTTS(str(tools_dir / "TTS-model" / "en_US-lessac-medium.onnx"))
     pipeline = VoicePipeline(stt, agent, tts)
 
     async with websockets.serve(

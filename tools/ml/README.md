@@ -60,7 +60,7 @@ if you change `features.py`.
 
 ```bash
 # 1) WESAD .pkl -> small per-subject wrist npz files      (~40 s, needs ~3 GB RAM)
-venv/bin/python -I tools/ml/wesad_extract.py --wesad "/home/arshix/projects/wireless_project/wesad_dataset/WESAD(2)/WESAD"
+venv/bin/python -I tools/ml/wesad_extract.py --wesad /path/to/WESAD
 
 # 2) sliding 60 s windows (5 s step) -> feature table       (~20 s)
 venv/bin/python -I tools/ml/build_dataset.py
