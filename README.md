@@ -7,6 +7,10 @@ The ESP8266's LED lights up, and for 60 seconds both boards stream pulse, skin-c
 data to a laptop. There, a classifier trained on the WESAD stress dataset estimates your current
 stress level. The result is spoken back and shown on a live dashboard.
 
+[![Demo video: hardware, a live wireless trial and the results (3 min)](docs/images/video_thumbnail.jpg)](https://github.com/AmirMohammad-Nouri/edge-ai-stress-sense/releases/download/v1.0/EdgeAIStressSense_demo.mp4)
+
+**▶ [Watch the 3-minute demo](https://github.com/AmirMohammad-Nouri/edge-ai-stress-sense/releases/download/v1.0/EdgeAIStressSense_demo.mp4)**: the hardware, a real measurement from voice command to spoken result, and the model's accuracy.
+
 ![Dashboard: live system diagram, stress estimate and sensor signals](docs/images/dashboard.png)
 
 | | |
