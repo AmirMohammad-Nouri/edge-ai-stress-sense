@@ -81,7 +81,7 @@ constexpr size_t SESSION_ID_LEN   = 16;
 
 // =====================================================================
 //  Stress measurement: MPU6050 + link to the ESP8266 vitals node
-//  (full pin table and protocol: docs/PINOUT.md, docs/PROTOCOL.md)
+//  (full pin table: PINOUT.md)
 // =====================================================================
 // MPU6050 on the default ESP32 I2C pins. AD0 -> GND => address 0x68.
 constexpr int MPU_SDA_PIN = 21;

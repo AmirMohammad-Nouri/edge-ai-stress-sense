@@ -3,7 +3,7 @@
 This guide takes you from an empty desk to a working stress measurement. Do the
 steps in order, and finish each check before moving on. Pin tables, the parts list
 and troubleshooting are in [README.md](README.md#hardware-setup). The reasons behind
-each pin choice are in [docs/PINOUT.md](docs/PINOUT.md).
+each pin choice are in [PINOUT.md](PINOUT.md).
 
 ```
 Part 1  Install software (laptop) ............ 30 min

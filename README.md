@@ -7,11 +7,11 @@ The ESP8266's LED lights up, and for 60 seconds both boards stream pulse, skin-c
 data to a laptop. There, a classifier trained on the WESAD stress dataset estimates your current
 stress level. The result is spoken back and shown on a live dashboard.
 
-[![Demo video: hardware, a live wireless trial and the results (3 min)](docs/images/video_thumbnail.jpg)](https://youtu.be/73kuJnn_6G4)
+[![Demo video: hardware, a live wireless trial and the results (3 min)](images/video_thumbnail.jpg)](https://youtu.be/73kuJnn_6G4)
 
 **▶ [Watch the 3-minute demo on YouTube](https://youtu.be/73kuJnn_6G4)**: the hardware, a real measurement from voice command to spoken result, and the model's accuracy.
 
-![Dashboard: live system diagram, stress estimate and sensor signals](docs/images/dashboard.png)
+![Dashboard: live system diagram, stress estimate and sensor signals](images/dashboard.png)
 
 | | |
 |---|---|
@@ -21,7 +21,6 @@ stress level. The result is spoken back and shown on a live dashboard.
 | **Wireless** | WiFi only: WebSocket + UDP, ACK/retry, packet-loss tracking |
 | **Build** | Arduino IDE (PlatformIO also supported) |
 
-> **Project website:** https://amirmohammad-nouri.github.io/edge-ai-stress-sense/ explains every part with diagrams and charts.  
 > **Building it yourself?** Follow **[STEP_BY_STEP.md](STEP_BY_STEP.md)**, the complete build guide.
 
 ---
@@ -126,11 +125,11 @@ Everything runs at **3.3 V**. The boards are **not** wired to each other; they c
 
 **ESP32 node:** microphone and accelerometer
 
-![ESP32 DevKitC wired to an INMP441 microphone and an MPU6050 (GY-521) accelerometer, with 3.3 V and GND from a breadboard power rail](docs/images/wiring_esp32.svg)
+![ESP32 DevKitC wired to an INMP441 microphone and an MPU6050 (GY-521) accelerometer, with 3.3 V and GND from a breadboard power rail](images/wiring_esp32.svg)
 
 **ESP8266 node:** pulse, skin conductance and the collect LED
 
-![WeMos D1 mini wired to an ADS1115 ADC, which reads the PPG pulse sensor and the Grove GSR sensor, plus an LED with a 220 ohm resistor on D5](docs/images/wiring_esp8266.svg)
+![WeMos D1 mini wired to an ADS1115 ADC, which reads the PPG pulse sensor and the Grove GSR sensor, plus an LED with a 220 ohm resistor on D5](images/wiring_esp8266.svg)
 
 | Board | Device | Pins |
 |---|---|---|
@@ -143,7 +142,7 @@ Everything runs at **3.3 V**. The boards are **not** wired to each other; they c
 | | LED | D5 → 220 Ω → LED → G |
 
 Avoid ESP32 GPIO 6–11 (flash), GPIO 0/2/5/12/15 (boot pins) and GPIO 34–39 (input-only), and ESP8266 D3/D4/D8 (boot pins).
-**[docs/PINOUT.md](docs/PINOUT.md)** gives the reason behind every pin choice.
+**[PINOUT.md](PINOUT.md)** gives the reason behind every pin choice.
 
 ### Sensor placement
 
@@ -311,9 +310,8 @@ Options: `--condition baseline|stress|amusement`, `--loss 0.05` (simulated packe
 │   ├── sim_devices.py           hardware simulator
 │   ├── make_secrets.py          .env → secrets.h
 │   └── voice_agent_server.py    speech-to-text / LLM / text-to-speech building blocks
-├── docs/
-│   ├── PINOUT.md                pin choices and wiring details
-│   └── index.html, images/      project website and wiring illustrations
+├── images/                     README pictures (dashboard, wiring)
+├── PINOUT.md                    pin choices and wiring details
 ├── STEP_BY_STEP.md              complete build guide (Arduino IDE)
 └── .env.example                 credential template
 ```
