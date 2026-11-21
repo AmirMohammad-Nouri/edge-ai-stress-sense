@@ -72,7 +72,7 @@ def labels_at(label_700: np.ndarray, fs: int, n: int) -> np.ndarray:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--wesad", default="/home/arshix/projects/wireless_project/wesad_dataset/WESAD(2)/WESAD")
+    ap.add_argument("--wesad", required=True, help="path to the extracted WESAD folder (contains S2/, S3/, ...)")
     ap.add_argument("--out", default=str(Path(__file__).parent / "cache"))
     args = ap.parse_args()
 
