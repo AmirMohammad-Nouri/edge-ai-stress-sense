@@ -17,7 +17,7 @@ ACC 32 Hz, TEMP 4 Hz). Our hardware is the wrist device without temperature, so
 | TEMP | none | not used |
 
 **How the paper captured and processed data, and what we copy:**
-- **Placement:** the E4 sat on the *non-dominant* wrist. Put the PPG, GSR and MPU6050 on the non-dominant hand and wrist (see `docs/PINOUT.md`).
+- **Placement:** the E4 sat on the *non-dominant* wrist. Put the PPG, GSR and MPU6050 on the non-dominant hand and wrist (see `PINOUT.md`).
 - **Window length:** 60 s for physiological features (following Kreibig 2010). So one measurement is **60 s**.
 - **Before measuring:** participants avoided caffeine and tobacco for 1 h and strenuous exercise that day. Do the same before a demo.
 - **Posture:** conditions were done sitting or standing (meditation always seated). Posture changes ACC and HR, so measure **seated and still**.

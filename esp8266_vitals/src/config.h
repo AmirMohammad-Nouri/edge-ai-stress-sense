@@ -1,7 +1,7 @@
 #pragma once
 // ESP8266 (WeMos/LOLIN D1 mini) "vitals node": PPG pulse sensor + Grove GSR
 // read through an ADS1115, plus a status LED that is ON while collecting.
-// Full pin table: docs/PINOUT.md
+// Full pin table: PINOUT.md
 
 // ---- WiFi: set in .env (see .env.example) ------------------------------
 #if __has_include("secrets.h")
