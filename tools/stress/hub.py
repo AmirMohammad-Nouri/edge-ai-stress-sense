@@ -2,7 +2,7 @@
 UDP side of the laptop: receives ESP8266 vitals, ESP32 motion and ESP8266
 heartbeats/ACKs, and keeps per-device health + link statistics.
 
-Packet formats (see docs/PROTOCOL.md):
+Packet formats:
   4211  P,<id>,<first_idx>,<n>,<ppg0>,<gsr0>,...              ESP8266 -> laptop
   4213  A,<id>,<first_idx>,<n>,<ax>,<ay>,<az>,<gx>,<gy>,<gz>,... ESP32 -> laptop
   4212  HB,esp8266,<rssi>,<coll>,<up>,<ppg>,<gsr>,<ads>,<id>,<samples>
